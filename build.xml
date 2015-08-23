@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="suskun"  default="jni" basedir=".">
+
+    <property name="build.dir" location="build"/>
+    <property name="src.dir" location="src/java"/>
+
+    <target name="jni">
+        <mkdir dir="${build.dir}"/>
+        <javac
+                destdir="${build.dir}"
+                debug="true"
+                target="1.8"
+                source="1.8"
+                debuglevel="vars,lines,source"
+                srcdir="${src.dir}"
+                includes="suskun/nn/FastNativeDnn.java">
+        </javac>
+        <javah destdir="src/cpp" classpath="${build.dir}" class="suskun.nn.FastNativeDnn"/>
+    </target>
+
+</project>
+
