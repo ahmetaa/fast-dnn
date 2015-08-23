@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project name="suskun"  default="jni" basedir=".">
+<project name="fast-dnn"  default="jni" basedir=".">
 
     <property name="build.dir" location="build"/>
     <property name="src.dir" location="src/java"/>

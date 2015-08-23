@@ -102,18 +102,10 @@ namespace dnn {
         FloatLayer() { };
 
         FloatLayer(float **weights, float *bias, int inputDim, int nodeCount) : weights(weights), bias(bias),
-                                                                                inputDim(inputDim),
+                                                                              inputDim(inputDim),
                                                                                 nodeCount(nodeCount) { }
 
         ~FloatLayer() {
-            cout<<"FloatLayer desctructor is called" << endl;
-
-            /*cout<<"Destructor called!"<<endl;
-            for (int i = 0; i < nodeCount; ++i) {
-                delete[] weights[i];
-            }
-            delete[] weights;
-            delete[] bias;*/
         }
 
     };
@@ -142,15 +134,6 @@ namespace dnn {
         }
 
         ~FloatDnn() {
-            cout<<"FloatDnn desctructor is called" << endl;
-
-            /*cout<<"Destructor called!"<<endl;
-            delete[] shift;
-            delete[] scale;
-            // delete layers;
-            for (int i = 0; i < layerCount(); ++i) {
-                delete(&layers[i]);
-            }*/
         }
     };
 

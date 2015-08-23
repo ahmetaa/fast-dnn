@@ -2,6 +2,11 @@ package suskun.nn;
 
 import java.io.*;
 
+
+/**
+ * Copied from https://github.com/adamheinrich/native-utils
+ * TODO: Remove this and make a simpler one.
+ */
 public class NativeUtils {
 
 

@@ -9,12 +9,9 @@ dnn::QuantizedDnn *quantizedDnn;
 void Java_suskun_nn_FastNativeDnn_initialize
 (JNIEnv *env, jobject obj, jstring str) {
     const char *kstr = env->GetStringUTFChars(str, 0);
-    cout<<kstr<<" huzzah!";
-}
-
-void *initialize(std::string fileName) {
-    floatDnn = new dnn::FloatDnn(fileName);
+    floatDnn = new dnn::FloatDnn(std::string(kstr));
     quantizedDnn = new dnn::QuantizedDnn(floatDnn);
+    cout<<kstr<<" huzzah!";
 }
 
 dnn::CalculationContext getContext( float* input, int frameCount, int dimension, int batchAmount ) {
