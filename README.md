@@ -1,7 +1,10 @@
 # fast-dnn
-This is a fast deep neural network library. This implementation is specifically targeted for DNN's used in Speech recognition systems.
+This is a fast deep neural network library specifically targeted for DNN's used in Speech recognition systems.
 Library does not provide training. It improves DNN calculations on CPU using special SIMD instructions, linear quantization and batch processing. 
 Ideas are taken from Vanhoucke et-al's 'Improving the speed of neural networks on CPUs' paper.
+
+This library is not yet usable.
+
 
 
 Library contains the C++ implementation and a Java access API. So far it only works for Linux x86-64 systems.
