@@ -15,6 +15,14 @@ extern "C" {
 JNIEXPORT void JNICALL Java_suskun_nn_FastNativeDnn_initialize
   (JNIEnv *, jobject, jstring);
 
+/*
+ * Class:     suskun_nn_FastNativeDnn
+ * Method:    calculate
+ * Signature: ([FIII)[F
+ */
+JNIEXPORT jfloatArray JNICALL Java_suskun_nn_FastNativeDnn_calculate
+  (JNIEnv *, jobject, jfloatArray, jint, jint, jint);
+
 #ifdef __cplusplus
 }
 #endif

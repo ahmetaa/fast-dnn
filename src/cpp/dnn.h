@@ -161,7 +161,7 @@ namespace dnn {
 
         void test();
 
-        void calculate(float *input);
+        float* calculate();
     };
 }
 #endif //DNN_DNN_H

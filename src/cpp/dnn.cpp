@@ -150,11 +150,9 @@ namespace dnn {
         std::cout << "Elapsed:" << ms.count() << std::endl;
     }
 
-    void CalculationContext::calculate(float* input) {
-
+    float* CalculationContext::calculate() {
         this->lastHiddenLayerActivations();
-        this->calculateOutput();
-
+        return calculateOutput()->data;
     }
 
     static inline float __horizontalSumFloat32(__m128 x) {
@@ -168,9 +166,9 @@ namespace dnn {
         // apply shift and scale with SIMD
         const int size = batchInput->dimension / 4;
 
-        float *input = batchInput->features;
+        float *input = batchInput->data;
 
-        for (int i = 0; i < batchInput->frameCount; ++i) {
+        for (int i = 0; i < batchInput->vectorCount; ++i) {
 
             for (int k = 0; k < size; ++k) {
                 __m128 val = _mm_load_ps(&input[k * 4]);
@@ -192,7 +190,7 @@ namespace dnn {
         dnn::float_alloc((void **) &this->activations, this->hiddenNodeCount * batchSize);
 
         // allocate for quantized unsigned char input values.
-        dnn::byte_alloc((void **) &this->quantizedActivations, this->hiddenNodeCount * input->frameCount);
+        dnn::byte_alloc((void **) &this->quantizedActivations, this->hiddenNodeCount * input->vectorCount);
     }
 
     void CalculationContext::inputActivations(int batchIndex) {
@@ -205,7 +203,7 @@ namespace dnn {
 
         for (int i = 0; i < this->hiddenNodeCount; ++i) {
 
-            float *input = &this->input->features[batchIndex * dimension];
+            float *input = &this->input->data[batchIndex * dimension];
 
             // for inputs in the batch.
             for (int j = 0; j < this->batchSize; ++j) {
@@ -324,7 +322,7 @@ namespace dnn {
 
         this->dnn->applyShiftAndScale(input);
 
-        const int frameCount = input->frameCount;
+        const int frameCount = input->vectorCount;
         //const int frameCount = 1;
 
         // calculate input layer in batches.
@@ -352,10 +350,10 @@ namespace dnn {
         const int outSize = this->dnn->outputSize();
 
         float *outputs;
-        dnn::float_alloc((void **) &outputs,  this->input->frameCount * outSize);
+        dnn::float_alloc((void **) &outputs,  this->input->vectorCount * outSize);
 
         // calculate in batches.
-        for (int i = 0; i < input->frameCount; i += batchSize) {
+        for (int i = 0; i < input->vectorCount; i += batchSize) {
             quantizedLayerActivations(this->dnn->outputLayer, i, outputs);
         }
 
@@ -365,7 +363,7 @@ namespace dnn {
         SoftMax *softMax  = new SoftMax(outSize);
 
         // add bias and apply soft max.
-        for (int i = 0; i < this->input->frameCount; i++) {
+        for (int i = 0; i < this->input->vectorCount; i++) {
 
             float *out = &outputs[i * outSize];
             for (int j = 0; j < outSize; ++j) {

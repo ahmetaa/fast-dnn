@@ -108,39 +108,39 @@ namespace dnn {
 
         int paddedFrameCount = paddedSize(frameCount, batchSize);
 
-        this->frameCount = paddedFrameCount;
+        this->vectorCount = paddedFrameCount;
         cout << "Input Frame count = " << frameCount << endl;
         cout << "Input Padded Frame count = " << paddedFrameCount << endl;
 
-        this->features = new float[this->dimension * paddedFrameCount]();
+        this->data = new float[this->dimension * paddedFrameCount]();
 
         int t = 0;
         for (int j = 0; j < frameCount; ++j) {
             for (int k = 0; k < this->dimension; ++k) {
                 float d = loader.load_float();
-                this->features[t] = d;
+                this->data[t] = d;
                 t++;
             }
         }
     }
 
-    BatchData::BatchData(float* input, int frameCount, int dimension, int batchSize) {
+    BatchData::BatchData(float* input, int vectorCount, int dimension, int batchSize) {
 
         this->dimension = dimension;
         cout << "Dimension = " << this->dimension << endl;
 
-        int paddedFrameCount = paddedSize(frameCount, batchSize);
+        int paddedFrameCount = paddedSize(vectorCount, batchSize);
 
-        this->frameCount = paddedFrameCount;
-        cout << "Input Frame count = " << frameCount << endl;
+        this->vectorCount = paddedFrameCount;
+        cout << "Input Frame count = " << vectorCount << endl;
         cout << "Input Padded Frame count = " << paddedFrameCount << endl;
 
-        this->features = new float[this->dimension * paddedFrameCount]();
+        this->data = new float[this->dimension * paddedFrameCount]();
 
         int t = 0;
-        for (int j = 0; j < frameCount; ++j) {
+        for (int j = 0; j < vectorCount; ++j) {
             for (int k = 0; k < this->dimension; ++k) {
-                this->features[t] = input[t];
+                this->data[t] = input[t];
                 t++;
             }
         }

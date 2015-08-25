@@ -44,12 +44,12 @@ namespace dnn {
      */
     class BatchData {
     public:
-        float *features;
+        float *data;
         int dimension;
-        int frameCount;
+        int vectorCount;
 
         BatchData(std::string fileName, int batchSize);
-        BatchData(float* input, int frameCount, int dimension, int batchSize);
+        BatchData(float* input, int vectorCount, int dimension, int batchSize);
     };
 
     /* A simple class for loading binary data from a file. It can load little endian int32 and float32 values
