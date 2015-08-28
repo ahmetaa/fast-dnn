@@ -70,7 +70,12 @@ public class FastNativeDnn {
         FastNativeDnn dnn = new FastNativeDnn();
         dnn.initialize("/home/afsina/data/dnn-5-1024/dnn.model.le");
         float[][] input = loadInputData(new File("/home/afsina/projects/suskun/feats.le"));
-        dnn.calculate(input);
+
+        for(int i =0; i<5; i++) {
+            long start = System.currentTimeMillis();
+            dnn.calculate(input);
+            System.out.println(System.currentTimeMillis()-start);
+        }
     }
 
 }

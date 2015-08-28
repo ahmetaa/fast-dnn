@@ -124,24 +124,23 @@ namespace dnn {
         }
     }
 
-    BatchData::BatchData(float* input, int vectorCount, int dimension, int batchSize) {
+    BatchData::BatchData(float *input, int vectorCount, int dimension, int batchSize) {
 
         this->dimension = dimension;
-        cout << "Dimension = " << this->dimension << endl;
-
         int paddedFrameCount = paddedSize(vectorCount, batchSize);
-
         this->vectorCount = paddedFrameCount;
-        cout << "Input Frame count = " << vectorCount << endl;
-        cout << "Input Padded Frame count = " << paddedFrameCount << endl;
 
-        this->data = new float[this->dimension * paddedFrameCount]();
+        if (paddedFrameCount == vectorCount) {
+            this->data = input;
+        } else {
+            this->data = new float[this->dimension * paddedFrameCount]();
 
-        int t = 0;
-        for (int j = 0; j < vectorCount; ++j) {
-            for (int k = 0; k < this->dimension; ++k) {
-                this->data[t] = input[t];
-                t++;
+            int t = 0;
+            for (int j = 0; j < vectorCount; ++j) {
+                for (int k = 0; k < this->dimension; ++k) {
+                    this->data[t] = input[t];
+                    t++;
+                }
             }
         }
     }

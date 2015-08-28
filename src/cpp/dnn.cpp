@@ -140,7 +140,6 @@ namespace dnn {
         typedef std::chrono::high_resolution_clock Clock;
         typedef std::chrono::milliseconds milliseconds;
 
-        cout << "Float DNN " << endl;
         Clock::time_point t0 = Clock::now();
         this->lastHiddenLayerActivations();
         this->calculateOutput();
@@ -151,8 +150,13 @@ namespace dnn {
     }
 
     float* CalculationContext::calculate() {
+        cout << "Hidden Layers " << endl;
         this->lastHiddenLayerActivations();
-        return calculateOutput()->data;
+        cout << "Output Layer " << endl;
+        BatchData *output = calculateOutput();
+        cout << "Output Calculated " << endl;
+        return output->data;
+        
     }
 
     static inline float __horizontalSumFloat32(__m128 x) {
@@ -373,7 +377,14 @@ namespace dnn {
             softMax->apply(&outputs[i * outSize]);
         }
 
-        return nullptr;
+        BatchData *result= new BatchData(
+                outputs,
+                this->input->vectorCount,
+                this->input->dimension,
+                this->batchSize
+        );
+
+        return result;
 
     }
 
