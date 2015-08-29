@@ -1,6 +1,7 @@
 package suskun.nn;
 
 import java.io.*;
+import java.util.Arrays;
 
 public class FastNativeDnn {
 
@@ -68,12 +69,16 @@ public class FastNativeDnn {
 
     public static void main(String[] args) throws IOException {
         FastNativeDnn dnn = new FastNativeDnn();
-        dnn.initialize("/home/afsina/data/dnn-5-1024/dnn.model.le");
+        dnn.initialize("/home/afsina/data/dnn-5-1024/dnn.model");
         float[][] input = loadInputData(new File("/home/afsina/projects/suskun/feats.le"));
 
         for(int i =0; i<5; i++) {
             long start = System.currentTimeMillis();
-            dnn.calculate(input);
+            float[][] result = dnn.calculate(input);
+            for(int j = 0; j<2; j++) {
+                float[] out = result[j];
+                System.out.println("output "+ j + " = " + Arrays.toString(out));
+            }
             System.out.println(System.currentTimeMillis()-start);
         }
     }

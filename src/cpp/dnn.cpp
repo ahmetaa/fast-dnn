@@ -10,7 +10,7 @@ using namespace std;
 
 int main() {
 
-    string fName = "/home/afsina/data/dnn-5-1024/dnn.model.le";
+    string fName = "/home/afsina/data/dnn-5-1024/dnn.model";
     dnn::FloatDnn floatDnn(fName);
     string featureName = "/home/afsina/projects/suskun/feats.le";
     dnn::BatchData batchData(featureName, 8);

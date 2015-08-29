@@ -12,7 +12,7 @@ namespace dnn {
 
     FloatDnn::FloatDnn(std::string fileName) {
 
-        BinaryLoader loader(fileName);
+        BinaryLoader loader(fileName, false);
 
         int layerCount = loader.load_int();
         cout << "Layer count = " << layerCount << endl;
@@ -76,7 +76,7 @@ namespace dnn {
             return num + dif;
     }
 
-    BinaryLoader::BinaryLoader(std::string fileName) {
+    BinaryLoader::BinaryLoader(std::string fileName, bool littleEndian) {
         FILE *pFile = fopen(fileName.c_str(), "rb");
 
         // obtain file size:
@@ -87,6 +87,7 @@ namespace dnn {
         // allocate memory to contain the whole file:
         this->content = new char[lSize];
         this->length = (int) lSize;
+        this->littleEndian = littleEndian;
 
         // copy the file into the buffer:
         size_t result = fread(this->content, 1, (size_t) lSize, pFile);
@@ -100,7 +101,7 @@ namespace dnn {
 
     BatchData::BatchData(std::string fileName, int batchSize) {
 
-        BinaryLoader loader(fileName);
+        BinaryLoader loader(fileName, true);
 
         int frameCount = loader.load_int();
         this->dimension = loader.load_int();

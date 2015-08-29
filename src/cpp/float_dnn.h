@@ -10,7 +10,7 @@
 #include <assert.h>
 #include <iostream>
 
-using  namespace std;
+using namespace std;
 
 namespace dnn {
 
@@ -49,10 +49,11 @@ namespace dnn {
         int vectorCount;
 
         BatchData(std::string fileName, int batchSize);
-        BatchData(float* input, int vectorCount, int dimension, int batchSize);
+
+        BatchData(float *input, int vectorCount, int dimension, int batchSize);
     };
 
-    /* A simple class for loading binary data from a file. It can load little endian int32 and float32 values
+    /* A simple class for loading binary data from a file. It can load little/big endian int32 and float32 values
      * This class contains an offset pointer so it is stateful.
      */
     class BinaryLoader {
@@ -61,23 +62,22 @@ namespace dnn {
         char *content;
         int offset = 0;
         int length;
+        bool littleEndian;
 
-        BinaryLoader(std::string fileName);
+        BinaryLoader(std::string fileName, bool littleEndian);
 
-        // loads a 32 bit little endian integer.
+        // loads a 32 bit integer.
         int load_int() {
             assert(offset < length);
             int val = *(reinterpret_cast<int *> (content + offset));
             offset += 4;
-            return val;
+            return littleEndian ? val : toBigEndian(val);
         }
 
-        // loads a 32 bit little endian float.
+        // loads a 32 bit  float.
         float load_float() {
-            assert(offset < length);
-            float val = *(reinterpret_cast<float *> (content + offset));
-            offset += 4;
-            return val;
+            int val = load_int();
+            return  *(reinterpret_cast<float *> (&val));
         }
 
         // loads an array of 32 bit float array. However, it pads zeroes if paddedSize is larger than amount.
@@ -87,6 +87,15 @@ namespace dnn {
                 values[i] = i < amount ? load_float() : 0;
             }
             return values;
+        }
+
+    private:
+        // convert value to big endian representation
+        int toBigEndian(int num) {
+            return ((num >> 24) & 0xff) |
+                   ((num << 8) & 0xff0000) |
+                   ((num >> 8) & 0xff00) |
+                   ((num << 24) & 0xff000000);
         }
     };
 
@@ -102,7 +111,7 @@ namespace dnn {
         FloatLayer() { };
 
         FloatLayer(float **weights, float *bias, int inputDim, int nodeCount) : weights(weights), bias(bias),
-                                                                              inputDim(inputDim),
+                                                                                inputDim(inputDim),
                                                                                 nodeCount(nodeCount) { }
 
         ~FloatLayer() {
