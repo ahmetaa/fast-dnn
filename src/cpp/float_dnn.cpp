@@ -15,23 +15,26 @@ namespace dnn {
         BinaryLoader loader(fileName, false);
 
         int layerCount = loader.load_int();
+
+#ifdef DEBUG
         cout << "Layer count = " << layerCount << endl;
+#endif
 
         this->layers = std::vector<FloatLayer>((unsigned long) layerCount);
 
         for (int j = 0; j < layerCount; j++) {
             int inputDimension = loader.load_int();
-            cout << "Layer " << j << " input dimension = " << inputDimension << endl;
-
             // make sure input is a factor of 4 for the first layer
             int paddedInputDim = j == 0 ? dnn::paddedSize(inputDimension, 4) : inputDimension;
+            int outputDimension = loader.load_int();
+
+#ifdef DEBUG
+            cout << "Layer " << j << " input dimension = " << inputDimension << endl;
             if (j == 0) {
                 cout << "Layer " << j << " padded input dimension = " << paddedInputDim << endl;
             }
-
-            int outputDimension = loader.load_int();
             cout << "Layer " << j << " output dimension = " << outputDimension << endl;
-
+#endif
             //load weights
             float **weights = new float *[outputDimension];
             for (int oo = 0; oo < outputDimension; oo++) {

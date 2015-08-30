@@ -30,8 +30,6 @@ namespace dnn {
 
     __m128 *getSimdFloat(float *values, int dim);
 
-    void check_alloc(int i);
-
     static inline float __horizontalSumFloat32(__m128 x);
 
     static inline int __horizontalSumInt32(__m128i x);
@@ -39,6 +37,25 @@ namespace dnn {
     const float WEIGHT_MULTIPLIER = 127;
 
     const float MAX_WEIGHT_THRESHOLD = 2;
+
+    inline void *aligned_malloc(size_t align, size_t size) {
+        void *result;
+#ifdef _MSC_VER
+        result = _aligned_malloc(size, align);
+#else
+        if (posix_memalign(&result, align, size)) result = 0;
+#endif
+        return result;
+    }
+
+    inline void aligned_free(void *ptr) {
+#ifdef _MSC_VER
+        _aligned_free(ptr);
+#else
+        free(ptr);
+#endif
+
+    }
 
     QuantizedSigmoid::QuantizedSigmoid() {
 
@@ -54,16 +71,21 @@ namespace dnn {
         }
     }
 
-    void SIMD_alloc(void **ptr, int simdBlockCount) {
-        check_alloc(posix_memalign(ptr, 16, sizeof(__m128) * simdBlockCount));
+    __m128* SIMD_alloc(int simdBlockCount) {
+        return (__m128*) aligned_malloc(16, sizeof(__m128) * simdBlockCount);
     }
 
-    void byte_alloc(void **ptr, int count) {
-        check_alloc(posix_memalign(ptr, 16, sizeof(char) * count));
+
+    __m128i* SIMD_i_alloc(int simdBlockCount) {
+        return (__m128i*) aligned_malloc(16, sizeof(__m128i) * simdBlockCount);
     }
 
-    void float_alloc(void **ptr, int count) {
-        check_alloc(posix_memalign(ptr, 16, sizeof(float) * count));
+    inline char* byte_alloc(int count) {
+        return (char *) aligned_malloc(16, sizeof(char) * count);
+    }
+
+    inline float* float_alloc(int count) {
+        return (float *) aligned_malloc(16, sizeof(float) * count);
     }
 
     FloatSimdLayer::FloatSimdLayer(FloatLayer *floatLayer) {
@@ -73,7 +95,7 @@ namespace dnn {
 
         const int simdVectorDim = this->inputDim / 4;
 
-        dnn::SIMD_alloc((void **) &this->weights, this->nodeCount * simdVectorDim);
+        this->weights =  dnn::SIMD_alloc(this->nodeCount * simdVectorDim);
 
         __m128 *w = this->weights;
 
@@ -95,21 +117,12 @@ namespace dnn {
     __m128 *getSimdFloat(float *values, int dim) {
 
         int k = dim / 4;
-        __m128 *result;
-
-        check_alloc(posix_memalign((void **) &result, 16, sizeof(__m128) * k));
+        __m128 *result = dnn::SIMD_alloc(k);
 
         for (int i = 0; i < k; ++i) {
             result[i] = _mm_load_ps(&values[i * 4]);
         }
         return result;
-    }
-
-    void check_alloc(int i) {
-        if (i != 0) {
-            printf("Allocation failure %d\n", i);
-            exit(i);
-        }
     }
 
     float absMax(float *floats, int size, float trimMin, float trimMax) {
@@ -149,14 +162,13 @@ namespace dnn {
         std::cout << "Elapsed:" << ms.count() << std::endl;
     }
 
-    float* CalculationContext::calculate() {
+    float *CalculationContext::calculate() {
         cout << "Hidden Layers " << endl;
         this->lastHiddenLayerActivations();
         cout << "Output Layer " << endl;
         BatchData *output = calculateOutput();
         cout << "Output Calculated " << endl;
         return output->data;
-        
     }
 
     static inline float __horizontalSumFloat32(__m128 x) {
@@ -191,10 +203,10 @@ namespace dnn {
         this->hiddenNodeCount = this->dnn->layers[1].nodeCount;
 
         // allocate for float activations. Only batch amount.
-        dnn::float_alloc((void **) &this->activations, this->hiddenNodeCount * batchSize);
+        this->activations = dnn::float_alloc(this->hiddenNodeCount * batchSize);
 
         // allocate for quantized unsigned char input values.
-        dnn::byte_alloc((void **) &this->quantizedActivations, this->hiddenNodeCount * input->vectorCount);
+        this->quantizedActivations  = (unsigned char *) dnn::byte_alloc(this->hiddenNodeCount * input->vectorCount);
     }
 
     void CalculationContext::inputActivations(int batchIndex) {
@@ -353,8 +365,7 @@ namespace dnn {
         // allocate for output.
         const int outSize = this->dnn->outputSize();
 
-        float *outputs;
-        dnn::float_alloc((void **) &outputs,  this->input->vectorCount * outSize);
+        float *outputs = dnn::float_alloc(this->input->vectorCount * outSize);
 
         // calculate in batches.
         for (int i = 0; i < input->vectorCount; i += batchSize) {
@@ -364,7 +375,7 @@ namespace dnn {
         // add bias values and calculate softmax for the output vectors.
         const float *biasArr = this->dnn->outputLayer->bias;
 
-        SoftMax *softMax  = new SoftMax(outSize);
+        SoftMax *softMax = new SoftMax(outSize);
 
         // add bias and apply soft max.
         for (int i = 0; i < this->input->vectorCount; i++) {
@@ -377,7 +388,7 @@ namespace dnn {
             softMax->apply(&outputs[i * outSize]);
         }
 
-        BatchData *result= new BatchData(
+        BatchData *result = new BatchData(
                 outputs,
                 this->input->vectorCount,
                 this->input->dimension,
@@ -407,11 +418,6 @@ namespace dnn {
         }
     }
 
-
-    void QuantizedDnn::validate() {
-        this->inputLayer->validate();
-    }
-
     QuantizedSimdLayer::QuantizedSimdLayer(FloatLayer *floatLayer) {
 
         this->nodeCount = floatLayer->nodeCount;
@@ -434,7 +440,7 @@ namespace dnn {
         const int inputSimdVectorSize = floatLayer->inputDim / 16;
 
         //allocate SIMD registers for `char` valued weights. Total amount is nodecount*input dim.
-        dnn::SIMD_alloc((void **) &this->weights, this->nodeCount * inputSimdVectorSize);
+        this->weights = dnn::SIMD_i_alloc(this->nodeCount * inputSimdVectorSize);
 
 
         __m128i *w = this->weights;
@@ -443,7 +449,7 @@ namespace dnn {
 
             char *quantizedWeights;
             // align allocated memory for quantized Weights.
-            dnn::byte_alloc((void **) &quantizedWeights, floatLayer->inputDim);
+            quantizedWeights = dnn::byte_alloc(floatLayer->inputDim);
 
             // 8 bit weight quantization
             for (int k = 0; k < floatLayer->inputDim; ++k) {

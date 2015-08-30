@@ -119,8 +119,6 @@ namespace dnn {
             return (int) layers.size();
         }
 
-        void validate();
-
         void applyShiftAndScale(BatchData *input);
     };
 
