@@ -30,12 +30,12 @@ JNIEXPORT jfloatArray JNICALL Java_suskun_nn_FastNativeDnn_calculate
                              (int) inputVectorCount,
                              (int) inputDimension,
                              (int) batchSize);
-    cout << "Batch data created." << endl;
+    //cout << "Batch data created." << endl;
     dnn::CalculationContext context(quantizedDnn, &batchData, batchSize);
     float *output = context.calculate();
-    cout << "done calculation" << endl;
+    //cout << "done calculation" << endl;
     int len = batchData.vectorCount * quantizedDnn->outputSize();
-    cout << "length is " << len << endl;
+    //cout << "length is " << len << endl;
     jfloatArray result = env->NewFloatArray(len);
     env->SetFloatArrayRegion(result, 0, len, output);
     return result;

@@ -1,7 +1,12 @@
 //
 // Created by afsina on 4/26/15.
 //
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
 #include <x86intrin.h>
+#endif
+
 #include <vector>
 #include <string>
 #include <assert.h>
@@ -38,10 +43,11 @@ namespace dnn {
 
     class SoftMax {
 
-    public:
+    private:
         float *expArray;
         int size;
 
+    public:
         SoftMax(int size) {
             expArray = new float[size];
             this->size = size;
@@ -50,8 +56,7 @@ namespace dnn {
         void apply(float *input);
 
         ~SoftMax() {
-            cout<<"softmax desctructor is called" << endl;
-           // delete[] expArray;
+            delete[] expArray;
         }
 
     };

@@ -104,17 +104,19 @@ namespace dnn {
 
     BatchData::BatchData(std::string fileName, int batchSize) {
 
-        BinaryLoader loader(fileName, true);
+        BinaryLoader loader(fileName, false);
 
         int frameCount = loader.load_int();
         this->dimension = loader.load_int();
-        cout << "Dimension = " << this->dimension << endl;
 
         int paddedFrameCount = paddedSize(frameCount, batchSize);
 
         this->vectorCount = paddedFrameCount;
+#ifdef DEBUG
+        cout << "Dimension = " << this->dimension << endl;
         cout << "Input Frame count = " << frameCount << endl;
         cout << "Input Padded Frame count = " << paddedFrameCount << endl;
+#endif
 
         this->data = new float[this->dimension * paddedFrameCount]();
 
@@ -125,6 +127,12 @@ namespace dnn {
                 this->data[t] = d;
                 t++;
             }
+
+#ifdef DEBUG
+            if (j < 30) {
+                print_container(&data[j * dimension], 16);
+            }
+#endif
         }
     }
 
@@ -136,6 +144,7 @@ namespace dnn {
 
         if (paddedFrameCount == vectorCount) {
             this->data = input;
+
         } else {
             this->data = new float[this->dimension * paddedFrameCount]();
 
@@ -147,5 +156,14 @@ namespace dnn {
                 }
             }
         }
+
+//#ifdef DEBUG
+        for (int j = 0; j < 50; ++j) {
+            cout<<j<<endl;
+            print_container(&data[j * dimension], 16);
+        }
+//#endif
+
     }
+
 }

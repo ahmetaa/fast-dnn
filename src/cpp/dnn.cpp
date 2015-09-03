@@ -1,5 +1,13 @@
 #include <iostream>
+
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
+
 #include <x86intrin.h>
+
+#endif
+
 #include <vector>
 #include <math.h>
 #include "dnn.h"
@@ -11,8 +19,10 @@ using namespace std;
 int main() {
 
     string fName = "/home/afsina/data/dnn-5-1024/dnn.model";
+    //string fName = "/home/afsina/data/dnn-5-1024/dnn.model.small";
     dnn::FloatDnn floatDnn(fName);
-    string featureName = "/home/afsina/projects/suskun/feats.le";
+    //string featureName = "/home/afsina/projects/suskun/feats-test";
+    string featureName = "/home/afsina/projects/suskun/feats";
     dnn::BatchData batchData(featureName, 8);
 
     dnn::QuantizedDnn qDnn(&floatDnn);
@@ -36,7 +46,7 @@ namespace dnn {
 
     const float WEIGHT_MULTIPLIER = 127;
 
-    const float MAX_WEIGHT_THRESHOLD = 2;
+    const float MAX_WEIGHT_THRESHOLD = 3;
 
     inline void *aligned_malloc(size_t align, size_t size) {
         void *result;
@@ -71,20 +81,20 @@ namespace dnn {
         }
     }
 
-    __m128* SIMD_alloc(int simdBlockCount) {
-        return (__m128*) aligned_malloc(16, sizeof(__m128) * simdBlockCount);
+    __m128 *SIMD_alloc(int simdBlockCount) {
+        return (__m128 *) aligned_malloc(16, sizeof(__m128) * simdBlockCount);
     }
 
 
-    __m128i* SIMD_i_alloc(int simdBlockCount) {
-        return (__m128i*) aligned_malloc(16, sizeof(__m128i) * simdBlockCount);
+    __m128i *SIMD_i_alloc(int simdBlockCount) {
+        return (__m128i *) aligned_malloc(16, sizeof(__m128i) * simdBlockCount);
     }
 
-    inline char* byte_alloc(int count) {
+    inline char *byte_alloc(int count) {
         return (char *) aligned_malloc(16, sizeof(char) * count);
     }
 
-    inline float* float_alloc(int count) {
+    inline float *float_alloc(int count) {
         return (float *) aligned_malloc(16, sizeof(float) * count);
     }
 
@@ -95,7 +105,7 @@ namespace dnn {
 
         const int simdVectorDim = this->inputDim / 4;
 
-        this->weights =  dnn::SIMD_alloc(this->nodeCount * simdVectorDim);
+        this->weights = dnn::SIMD_alloc(this->nodeCount * simdVectorDim);
 
         __m128 *w = this->weights;
 
@@ -163,11 +173,11 @@ namespace dnn {
     }
 
     float *CalculationContext::calculate() {
-        cout << "Hidden Layers " << endl;
+        //cout << "Hidden Layers " << endl;
         this->lastHiddenLayerActivations();
-        cout << "Output Layer " << endl;
+        //cout << "Output Layer " << endl;
         BatchData *output = calculateOutput();
-        cout << "Output Calculated " << endl;
+        //cout << "Output Calculated " << endl;
         return output->data;
     }
 
@@ -206,7 +216,7 @@ namespace dnn {
         this->activations = dnn::float_alloc(this->hiddenNodeCount * batchSize);
 
         // allocate for quantized unsigned char input values.
-        this->quantizedActivations  = (unsigned char *) dnn::byte_alloc(this->hiddenNodeCount * input->vectorCount);
+        this->quantizedActivations = (unsigned char *) dnn::byte_alloc(this->hiddenNodeCount * input->vectorCount);
     }
 
     void CalculationContext::inputActivations(int batchIndex) {
@@ -242,7 +252,7 @@ namespace dnn {
     void CalculationContext::addBias(float *bias) {
 
         // add bias values to output batch
-        const float *biasArr = bias;
+        float *biasArr = bias;
 
         float *ac = this->activations;
         for (int k = 0; k < this->batchSize; k++) {
@@ -287,7 +297,7 @@ namespace dnn {
         const int vectorSize = layer->inputDim / 16;
 
         // get quantized weight array for the node i.
-        const __m128i *w = layer->weights;
+        __m128i *w = layer->weights;
 
         const int nodeCount = layer->nodeCount;
         const float dequantizationCoefficient = layer->multiplier * dnn::SIGMOID_QUANTIZATION_MULTIPLIER;
@@ -336,15 +346,20 @@ namespace dnn {
 
     void CalculationContext::lastHiddenLayerActivations() {
 
-        this->dnn->applyShiftAndScale(input);
+        this->dnn->applyShiftAndScale(this->input);
 
         const int frameCount = input->vectorCount;
-        //const int frameCount = 1;
 
         // calculate input layer in batches.
         for (int i = 0; i < frameCount; i += batchSize) {
             inputActivations(i);
             addBias(this->dnn->inputLayer->bias);
+#ifdef DEBUG
+/*            if (i == 0) {
+                cout<<"input"<<endl;
+                print_container(this->activations, 16);
+            }*/
+#endif
             quantizedSigmoid(i);
         }
 
@@ -355,6 +370,13 @@ namespace dnn {
             for (int i = 0; i < frameCount; i += batchSize) {
                 quantizedLayerActivations(layer, i, this->activations);
                 addBias(layer->bias);
+#ifdef DEBUG
+/*                if (i == 0) {
+                    cout<<j<<endl;
+                    print_container(this->activations, 16);
+                }*/
+#endif
+
                 quantizedSigmoid(i);
             }
         }
@@ -369,24 +391,38 @@ namespace dnn {
 
         // calculate in batches.
         for (int i = 0; i < input->vectorCount; i += batchSize) {
-            quantizedLayerActivations(this->dnn->outputLayer, i, outputs);
+            quantizedLayerActivations(this->dnn->outputLayer, i, &outputs[i * outSize]);
         }
 
         // add bias values and calculate softmax for the output vectors.
         const float *biasArr = this->dnn->outputLayer->bias;
 
+        // add bias and apply soft max.
         SoftMax *softMax = new SoftMax(outSize);
 
-        // add bias and apply soft max.
         for (int i = 0; i < this->input->vectorCount; i++) {
-
             float *out = &outputs[i * outSize];
             for (int j = 0; j < outSize; ++j) {
                 // for inputs in the batch.
                 out[j] += biasArr[j];
             }
+#ifdef DEBUG
+            if(i<30) {
+                cout<<"output"<<endl;
+                dnn::print_container(&outputs[i * outSize], 16);
+            }
+#endif
+
             softMax->apply(&outputs[i * outSize]);
+#ifdef DEBUG
+            if (i < 30) {
+                cout << "softmax" << endl;
+                dnn::print_container(&outputs[i * outSize], 16);
+            }
+#endif
+
         }
+        delete softMax;
 
         BatchData *result = new BatchData(
                 outputs,

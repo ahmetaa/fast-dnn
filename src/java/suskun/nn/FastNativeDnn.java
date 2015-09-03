@@ -27,25 +27,21 @@ public class FastNativeDnn {
 
     public static float[][] loadInputData(File file) throws IOException {
         try (DataInputStream dis = new DataInputStream(new BufferedInputStream(new FileInputStream(file)))) {
-            int frameCount = loadIntLe(dis);
-            int dimension = loadIntLe(dis);
+            int frameCount = dis.readInt();
+            int dimension = dis.readInt();
             float[][] data = new float[frameCount][];
             for (int i = 0; i < frameCount; i++) {
                 data[i] = new float[dimension];
                 for (int j = 0; j < dimension; j++) {
-                    data[i][j] = loadFloatLe(dis);
+                    data[i][j] = dis.readFloat();
                 }
+/*
+                if (i < 20)
+                    System.out.println("I = " + Arrays.toString(data[i]));
+*/
             }
             return data;
         }
-    }
-
-    private static int loadIntLe(DataInputStream dis) throws IOException {
-        return Integer.reverseBytes(dis.readInt());
-    }
-
-    private static float loadFloatLe(DataInputStream dis) throws IOException {
-        return Float.intBitsToFloat(loadIntLe(dis));
     }
 
     private float[] flatten(float[][] arr2d) {
@@ -70,16 +66,16 @@ public class FastNativeDnn {
     public static void main(String[] args) throws IOException {
         FastNativeDnn dnn = new FastNativeDnn();
         dnn.initialize("/home/afsina/data/dnn-5-1024/dnn.model");
-        float[][] input = loadInputData(new File("/home/afsina/projects/suskun/feats.le"));
+        float[][] input = loadInputData(new File("/home/afsina/projects/suskun/feats"));
 
-        for(int i =0; i<5; i++) {
+        for (int i = 0; i < 1; i++) {
             long start = System.currentTimeMillis();
             float[][] result = dnn.calculate(input);
-            for(int j = 0; j<2; j++) {
+            for (int j = 0; j < 12; j++) {
                 float[] out = result[j];
-                System.out.println("output "+ j + " = " + Arrays.toString(out));
+                System.out.println("output " + j + " = " + Arrays.toString(out));
             }
-            System.out.println(System.currentTimeMillis()-start);
+            System.out.println(System.currentTimeMillis() - start);
         }
     }
 
