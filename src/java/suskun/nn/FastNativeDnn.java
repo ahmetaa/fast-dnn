@@ -18,7 +18,7 @@ public class FastNativeDnn {
 
     private native float[] calculate(float[] input, int inputVectorCount, int inputDimension, int batchSize);
 
-    public float[][] calculate(float[][] input, int outputSize){
+    public float[][] calculate(float[][] input, int outputSize) {
         int dimension = input[0].length;
         float[] flattened = flatten(input);
         float[] res1d = calculate(flattened, input.length, dimension, 8);
@@ -35,10 +35,6 @@ public class FastNativeDnn {
                 for (int j = 0; j < dimension; j++) {
                     data[i][j] = dis.readFloat();
                 }
-/*
-                if (i < 20)
-                    System.out.println("I = " + Arrays.toString(data[i]));
-*/
             }
             return data;
         }
@@ -71,9 +67,9 @@ public class FastNativeDnn {
         for (int i = 0; i < 1; i++) {
             long start = System.currentTimeMillis();
             float[][] result = dnn.calculate(input, 4046);
-            for (int j = 0; j < 52; j++) {
+            for (int j = 0; j < 10; j++) {
                 float[] out = result[j];
-                System.out.println("output " + j + " = " + Arrays.toString(Arrays.copyOf(out,30)));
+                System.out.println("output " + j + " = " + Arrays.toString(Arrays.copyOf(out, 30)));
             }
             System.out.println(System.currentTimeMillis() - start);
         }
