@@ -150,7 +150,7 @@ namespace dnn {
 
         void lastHiddenLayerActivations();
 
-        void quantizedLayerActivations(QuantizedSimdLayer *layer, int batchIndex, float *sequentialActivations);
+        void quantizedLayerActivations(QuantizedSimdLayer *layer, int batchStartIndex, float *sequentialActivations);
 
         void inputActivations(int batchIndex);
 

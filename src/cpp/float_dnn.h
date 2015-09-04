@@ -51,6 +51,8 @@ namespace dnn {
         BatchData(std::string fileName, int batchSize);
 
         BatchData(float *input, int vectorCount, int dimension, int batchSize);
+
+        BatchData(float *input, int vectorCount, int dimension);
     };
 
     /* A simple class for loading binary data from a file. It can load little/big endian int32 and float32 values

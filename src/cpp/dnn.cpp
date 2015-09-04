@@ -154,9 +154,8 @@ namespace dnn {
     void dump(__m128 data) {
         float temp[4] __attribute((aligned(4*4)));
         _mm_store_ps(&temp[0], data);
-        print_container(temp, 4);
+        print_container(&temp, 4);
     }
-
 
     void CalculationContext::test() {
 
@@ -291,7 +290,7 @@ namespace dnn {
 
     void CalculationContext::quantizedLayerActivations(
             QuantizedSimdLayer *layer,
-            int batchIndex,
+            int batchStartIndex,
             float *activations) {
 
         const int vectorSize = layer->inputDim / 16;
@@ -305,7 +304,7 @@ namespace dnn {
         // for each node
         for (int i = 0; i < nodeCount; ++i) {
 
-            const unsigned char *input = &this->quantizedActivations[batchIndex * layer->inputDim];
+            const unsigned char *input = &this->quantizedActivations[batchStartIndex * layer->inputDim];
 
             // for inputs in the batch.
             for (int k = 0; k < this->batchSize; k++) {
@@ -332,6 +331,7 @@ namespace dnn {
                 int i1 = k * nodeCount + i;
                 activations[i1] =
                         ((float) dnn::__horizontalSumInt32(sum)) / dequantizationCoefficient;
+                input += layer->inputDim;
 
             }
             w += vectorSize;
@@ -354,12 +354,6 @@ namespace dnn {
         for (int i = 0; i < frameCount; i += batchSize) {
             inputActivations(i);
             addBias(this->dnn->inputLayer->bias);
-#ifdef DEBUG
-/*            if (i == 0) {
-                cout<<"input"<<endl;
-                print_container(this->activations, 16);
-            }*/
-#endif
             quantizedSigmoid(i);
         }
 
@@ -370,13 +364,6 @@ namespace dnn {
             for (int i = 0; i < frameCount; i += batchSize) {
                 quantizedLayerActivations(layer, i, this->activations);
                 addBias(layer->bias);
-#ifdef DEBUG
-/*                if (i == 0) {
-                    cout<<j<<endl;
-                    print_container(this->activations, 16);
-                }*/
-#endif
-
                 quantizedSigmoid(i);
             }
         }
@@ -386,11 +373,10 @@ namespace dnn {
 
         // allocate for output.
         const int outSize = this->dnn->outputSize();
-
         float *outputs = dnn::float_alloc(this->input->vectorCount * outSize);
 
         // calculate in batches.
-        for (int i = 0; i < input->vectorCount; i += batchSize) {
+        for (int i = 0; i < this->input->vectorCount; i += batchSize) {
             quantizedLayerActivations(this->dnn->outputLayer, i, &outputs[i * outSize]);
         }
 
@@ -406,29 +392,14 @@ namespace dnn {
                 // for inputs in the batch.
                 out[j] += biasArr[j];
             }
-#ifdef DEBUG
-            if(i<30) {
-                cout<<"output"<<endl;
-                dnn::print_container(&outputs[i * outSize], 16);
-            }
-#endif
-
             softMax->apply(&outputs[i * outSize]);
-#ifdef DEBUG
-            if (i < 30) {
-                cout << "softmax" << endl;
-                dnn::print_container(&outputs[i * outSize], 16);
-            }
-#endif
-
         }
         delete softMax;
 
         BatchData *result = new BatchData(
                 outputs,
                 this->input->vectorCount,
-                this->input->dimension,
-                this->batchSize
+                outSize
         );
 
         return result;

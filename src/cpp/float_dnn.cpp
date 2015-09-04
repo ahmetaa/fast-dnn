@@ -127,13 +127,13 @@ namespace dnn {
                 this->data[t] = d;
                 t++;
             }
-
-#ifdef DEBUG
-            if (j < 30) {
-                print_container(&data[j * dimension], 16);
-            }
-#endif
         }
+    }
+
+    BatchData::BatchData(float *input, int vectorCount, int dimension) {
+        this->data = input;
+        this->vectorCount = vectorCount;
+        this->dimension = dimension;
     }
 
     BatchData::BatchData(float *input, int vectorCount, int dimension, int batchSize) {
@@ -156,14 +156,6 @@ namespace dnn {
                 }
             }
         }
-
-//#ifdef DEBUG
-        for (int j = 0; j < 50; ++j) {
-            cout<<j<<endl;
-            print_container(&data[j * dimension], 16);
-        }
-//#endif
-
     }
 
 }

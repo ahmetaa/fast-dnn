@@ -18,11 +18,11 @@ public class FastNativeDnn {
 
     private native float[] calculate(float[] input, int inputVectorCount, int inputDimension, int batchSize);
 
-    public float[][] calculate(float[][] input) {
+    public float[][] calculate(float[][] input, int outputSize){
         int dimension = input[0].length;
         float[] flattened = flatten(input);
         float[] res1d = calculate(flattened, input.length, dimension, 8);
-        return make2d(res1d, input.length, dimension);
+        return make2d(res1d, input.length, outputSize);
     }
 
     public static float[][] loadInputData(File file) throws IOException {
@@ -70,10 +70,10 @@ public class FastNativeDnn {
 
         for (int i = 0; i < 1; i++) {
             long start = System.currentTimeMillis();
-            float[][] result = dnn.calculate(input);
-            for (int j = 0; j < 12; j++) {
+            float[][] result = dnn.calculate(input, 4046);
+            for (int j = 0; j < 52; j++) {
                 float[] out = result[j];
-                System.out.println("output " + j + " = " + Arrays.toString(out));
+                System.out.println("output " + j + " = " + Arrays.toString(Arrays.copyOf(out,30)));
             }
             System.out.println(System.currentTimeMillis() - start);
         }
