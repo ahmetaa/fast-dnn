@@ -21,9 +21,14 @@ namespace dnn {
 #endif
 
         this->layers = std::vector<FloatLayer>((unsigned long) layerCount);
+        int actualInputDimension = 0;
 
         for (int j = 0; j < layerCount; j++) {
+
             int inputDimension = loader.load_int();
+            if (j == 0) {
+                actualInputDimension = inputDimension;
+            }
             // make sure input is a factor of 4 for the first layer
             int paddedInputDim = j == 0 ? dnn::paddedSize(inputDimension, 4) : inputDimension;
             int outputDimension = loader.load_int();
@@ -59,13 +64,11 @@ namespace dnn {
         this->inputLayer = &layers[0];
 
         // load shift vector. This is added to input vector.
-        int shiftDimension = loader.load_int();
-        this->shift = loader.loadFloatArray(shiftDimension, this->inputLayer->inputDim);
+        this->shift = loader.loadFloatArray(actualInputDimension, this->inputLayer->inputDim);
 
 
         // load scale vector. This is multiplied to input vector.
-        int scaleDimension = loader.load_int();
-        this->scale = loader.loadFloatArray(scaleDimension, this->inputLayer->inputDim);
+        this->scale = loader.loadFloatArray(actualInputDimension, this->inputLayer->inputDim);
 
         //TODO: should we free the loader content?
 

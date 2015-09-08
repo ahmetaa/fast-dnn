@@ -14,7 +14,7 @@ JNIEXPORT void JNICALL Java_suskun_nn_FastNativeDnn_initialize
 }
 
 dnn::CalculationContext getContext(float *input, int frameCount, int dimension, int batchAmount) {
-    dnn::BatchData batchData(input, frameCount, dimension, batchAmount);
+    dnn::BatchData batchData(input, frameCount, dimension);
     dnn::CalculationContext context(quantizedDnn, &batchData, batchAmount);
     return context;
 }

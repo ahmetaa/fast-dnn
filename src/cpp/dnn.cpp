@@ -18,7 +18,7 @@ using namespace std;
 
 int main() {
 
-    string fName = "/home/afsina/data/dnn-5-1024/dnn.model";
+    string fName = "/home/afsina/data/dnn-5-1024/dnn.tv.model";
     //string fName = "/home/afsina/data/dnn-5-1024/dnn.model.small";
     dnn::FloatDnn floatDnn(fName);
     //string featureName = "/home/afsina/projects/suskun/feats-test";
@@ -232,7 +232,8 @@ namespace dnn {
 
             // for inputs in the batch.
             for (int j = 0; j < this->batchSize; ++j) {
-
+                if (j + batchIndex >= this->input->vectorCount)
+                    break;
                 __m128 sum = _mm_setzero_ps();
 
                 for (int k = 0; k < vectorInputSize; ++k) {
@@ -277,6 +278,8 @@ namespace dnn {
 
         // for all activations calculated from the input batch,
         for (int k = 0; k < this->batchSize; k++) {
+            if (k + batchIndex >= this->input->vectorCount)
+                break;
             // calculate quantized sigmoid. And write the result
             for (int i = 0; i < this->hiddenNodeCount; ++i) {
                 // for inputs in the batch.
@@ -308,6 +311,8 @@ namespace dnn {
 
             // for inputs in the batch.
             for (int k = 0; k < this->batchSize; k++) {
+                if (k + batchStartIndex >= this->input->vectorCount)
+                    break;
 
                 // set sum to 0
                 __m128i sum = _mm_setzero_si128();
