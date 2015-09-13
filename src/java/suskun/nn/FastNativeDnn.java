@@ -29,6 +29,7 @@ public class FastNativeDnn {
         try (DataInputStream dis = new DataInputStream(new BufferedInputStream(new FileInputStream(file)))) {
             int frameCount = dis.readInt();
             int dimension = dis.readInt();
+
             float[][] data = new float[frameCount][];
             for (int i = 0; i < frameCount; i++) {
                 data[i] = new float[dimension];
@@ -61,20 +62,28 @@ public class FastNativeDnn {
 
     public static void main(String[] args) throws IOException {
         FastNativeDnn dnn = new FastNativeDnn();
-        dnn.initialize("/home/afsina/data/dnn-5-1024/dnn.tv.model");
+        dnn.initialize("/home/afsina/data/dnn-5-1024/dnn.model");
         float[][] input = loadInputData(new File("/home/afsina/projects/suskun/feats"));
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 1; i++) {
             long start = System.currentTimeMillis();
             float[][] result = dnn.calculate(input, 4055);
 
             for (int j = 0; j < input.length; j++) {
                 float[] out = result[j];
-                System.out.println("output " + j + " = " + Arrays.toString(Arrays.copyOf(out, 30)));
+                System.out.println(j + " " +dump(Arrays.copyOf(out, 20)));
             }
 
             System.out.println(System.currentTimeMillis() - start);
         }
+    }
+
+    static String dump(float[] data) {
+        StringBuilder sb = new StringBuilder();
+        for (float v : data) {
+            sb.append(String.format("%.4f ", v));
+        }
+        return sb.toString();
     }
 
 }

@@ -1,12 +1,14 @@
 package suskun.nn;
 
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class FeedForwardNetwork {
@@ -21,6 +23,14 @@ public class FeedForwardNetwork {
     // Shift matrix is added to input matrix and result is multiplied with scale matrix.
     private float[] shiftVector;
     private float[] scaleVector;
+
+    public FeedForwardNetwork(List<Layer> layers, float[] shiftVector, float[] scaleVector) {
+        this.layers = layers;
+        this.outputLayer = layers.get(layers.size() - 1);
+        this.firstLayer = layers.get(0);
+        this.shiftVector = shiftVector;
+        this.scaleVector = scaleVector;
+    }
 
     public Layer getLayer(int layerIndex) {
         if (layerIndex < 0 || layerIndex >= layers.size())
@@ -41,24 +51,29 @@ public class FeedForwardNetwork {
 
     public static Pattern FEATURE_LINES_PATTERN = Pattern.compile("(?:\\[)(.+?)(?:\\])", Pattern.DOTALL | Pattern.MULTILINE);
 
-/*    *//**
+    /**
      * Generate a JBlasDnn instance from text file
      *
      * @throws IOException
-     *//*
+     */
     public static FeedForwardNetwork loadFromTextFile(File networkFile, File transformationFile) throws IOException {
         List<Layer> layers = loadLayersFromTextFile(networkFile);
 
-        String wholeThing = new SimpleTextReader(transformationFile, "UTF-8").asString();
-        List<String> featureBlocks = Regexps.firstGroupMatches(FEATURE_LINES_PATTERN, wholeThing);
+        List<String> lines = Files.readAllLines(transformationFile.toPath(), StandardCharsets.UTF_8);
+        String wholeThing = String.join(" ", lines);
+        List<String> featureBlocks = new ArrayList<>();
+        Matcher m = FEATURE_LINES_PATTERN.matcher(wholeThing);
+        while (m.find()) {
+            featureBlocks.add(m.group(1).trim());
+        }
 
         if (featureBlocks.size() != 2) {
             throw new IllegalStateException("Feature transformation file should have two vectors in it. But it has "
                     + featureBlocks.size());
         }
 
-        float[] shiftVector = FloatArrays.fromString(featureBlocks.get(0), " ");
-        float[] scaleVector = FloatArrays.fromString(featureBlocks.get(1), " ");
+        float[] shiftVector = fromString(featureBlocks.get(0));
+        float[] scaleVector = fromString(featureBlocks.get(1));
 
         int inputDimension = layers.get(0).inputDimension;
         if (shiftVector.length != inputDimension) {
@@ -69,13 +84,51 @@ public class FeedForwardNetwork {
             throw new IllegalStateException("Scale transformation vector size " + scaleVector.length +
                     " is not same as input dimension " + inputDimension);
         }
-        return new JBlasDnn(layers, shiftVector, scaleVector);
+        return new FeedForwardNetwork(layers, shiftVector, scaleVector);
+    }
+
+    public void shiftAndScale(List<BatchData.FloatData> data) {
+        for (BatchData.FloatData floatData : data) {
+            float[] d = floatData.getData();
+            for (int i = 0; i < d.length; i++) {
+                d[i] = (d[i] + shiftVector[i]) * scaleVector[i];
+            }
+        }
+    }
+
+    /**
+     * Calculates layer activations for multiple vectors.
+     */
+    public List<BatchData.FloatData> calculate(List<BatchData.FloatData> inputVectors) {
+
+        List<BatchData.FloatData> input = inputVectors;
+
+        for (Layer layer : layers) {
+            List<BatchData.FloatData> activations = layer.activations(input);
+            if (layer == outputLayer) {
+                softMax(activations);
+                return activations;
+            } else {
+                sigmoid(activations);
+            }
+            input = activations;
+        }
+        throw new IllegalStateException("Output layer cannot be reached!");
+    }
+
+    public static float[] fromString(String str) {
+        String[] tokens = str.split("[ ]+");
+        float[] result = new float[tokens.length];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = Float.parseFloat(tokens[i]);
+        }
+        return result;
     }
 
     private static List<Layer> loadLayersFromTextFile(File networkFile) throws IOException {
         List<Layer> layers = new ArrayList<>();
 
-        try (BufferedReader reader = Files.newBufferedReader(networkFile.toPath(), Charsets.UTF_8)) {
+        try (BufferedReader reader = Files.newBufferedReader(networkFile.toPath(), StandardCharsets.UTF_8)) {
 
             String line;
             int nodeCount = -1;
@@ -109,9 +162,9 @@ public class FeedForwardNetwork {
                         weightLine[j] = Float.parseFloat(weightStrings[j]);
                     }
                     if (i < nodeCount) {
-                        weights.putRow(i, new FloatMatrix(weightLine));
+                        weights[i] = weightLine;
                     } else {
-                        bias.putColumn(0, new FloatMatrix(weightLine));
+                        bias = weightLine;
                     }
                 }
                 Layer l = new Layer(weights, bias);
@@ -119,5 +172,168 @@ public class FeedForwardNetwork {
             }
         }
         return layers;
-    }   */
+    }
+
+    public static FeedForwardNetwork loadFromBinary(File file) throws IOException {
+        try (DataInputStream dis = new DataInputStream(new BufferedInputStream(new FileInputStream(file)))) {
+            int layerCount = dis.readInt();
+            List<Layer> layers = new ArrayList<>(layerCount);
+            for (int i = 0; i < layerCount; i++) {
+                Layer l = Layer.loadFromStream(dis);
+                /*if(i==0)
+                    l.dumpWeightHistogram();*/
+                layers.add(l);
+            }
+            int inputSize = layers.get(0).inputDimension;
+            float[] shiftVector = deserializeRaw(dis, inputSize);
+            float[] scaleVector = deserializeRaw(dis, inputSize);
+            return new FeedForwardNetwork(layers, shiftVector, scaleVector);
+        }
+    }
+
+    public void saveBinary(File file) throws IOException {
+        try (DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) {
+            dos.writeInt(layers.size());
+            for (Layer layer : layers) {
+                layer.saveToStream(dos);
+            }
+            serializeRaw(dos, shiftVector);
+            serializeRaw(dos, scaleVector);
+        }
+    }
+
+    public static float[] deserializeRaw(DataInputStream dis, int amount) throws IOException {
+        float[] result = new float[amount];
+        for (int i = 0; i < amount; i++) {
+            result[i] = dis.readFloat();
+        }
+        return result;
+    }
+
+    public static void serializeRaw(DataOutputStream dos, float[] data) throws IOException {
+        for (float v : data) {
+            dos.writeFloat(v);
+        }
+    }
+
+    public static class Layer {
+        public final float[][] weights;
+        public final float[] bias;
+        public final int inputDimension;
+        public final int outputDimension;
+
+        public Layer(float[][] weights, float[] bias) {
+            this.weights = weights;
+            this.bias = bias;
+            this.inputDimension = weights[0].length;
+            this.outputDimension = weights.length;
+        }
+
+        public static Layer loadFromStream(DataInputStream dis) throws IOException {
+            int inputDimension = dis.readInt();
+            int outputDimension = dis.readInt();
+            float[][] weights = new float[outputDimension][inputDimension];
+            float[] bias = new float[outputDimension];
+            for (int i = 0; i < outputDimension + 1; i++) {
+                // for nodes, there are input amount of weights. For bias, node amount.
+                int dim = i < outputDimension ? inputDimension : outputDimension;
+                float[] weightLine = new float[dim];
+                for (int j = 0; j < weightLine.length; j++) {
+                    weightLine[j] = dis.readFloat();
+                }
+                if (i < outputDimension) {
+                    weights[i] = weightLine;
+                } else {
+                    bias = weightLine;
+                }
+            }
+            return new Layer(weights, bias);
+        }
+
+        public void saveToStream(DataOutputStream dos) throws IOException {
+            dos.writeInt(inputDimension);
+            dos.writeInt(outputDimension);
+            for (int i = 0; i < outputDimension + 1; i++) {
+                float[] weightLine = i < outputDimension ? weights[i] : bias;
+                for (float w : weightLine) {
+                    dos.writeFloat(w);
+                }
+            }
+        }
+
+        /**
+         * Saves only a portion of the layer. Used for debugging purposes.
+         */
+        public void saveToStream(DataOutputStream dos, int inputSize, int outputSize) throws IOException {
+            dos.writeInt(inputSize);
+            dos.writeInt(outputSize);
+            for (int i = 0; i < outputSize + 1; i++) {
+                float[] weightLine = i < outputSize ? weights[i] : bias;
+                int amount = i == outputSize ? outputSize : inputSize;
+                for (int j = 0; j < amount; j++) {
+                    dos.writeFloat(weightLine[j]);
+                }
+            }
+        }
+
+        /**
+         * Calculates layer activations.
+         */
+        public float[] activations(float[] inputVector) {
+            float[] result = new float[outputDimension];
+            int i = 0;
+            for (float[] nodeWeights : weights) {
+                float sum = 0;
+                for (int j = 0; j < nodeWeights.length; j++) {
+                    sum += inputVector[j] * nodeWeights[j];
+                }
+                result[i] = sum + bias[i];
+                i++;
+            }
+            return result;
+        }
+
+        /**
+         * Calculates layer activations for multiple vectors.
+         */
+        public List<BatchData.FloatData> activations(List<BatchData.FloatData> inputVectors) {
+            List<BatchData.FloatData> result = new ArrayList<>();
+            for (BatchData.FloatData inputVector : inputVectors) {
+                result.add(inputVector.copy(activations(inputVector.getData())));
+            }
+            return result;
+        }
+
+
+    }
+
+    public static void sigmoid(List<BatchData.FloatData> inputVectors) {
+        for (BatchData.FloatData inputVector : inputVectors) {
+            sigmoid(inputVector.getData());
+        }
+    }
+
+    public static void softMax(List<BatchData.FloatData> inputVectors) {
+        for (BatchData.FloatData inputVector : inputVectors) {
+            softMax(inputVector.getData());
+        }
+    }
+
+    public static void sigmoid(float[] f) {
+        for (int i = 0; i < f.length; i++) {
+            f[i] = (float) (1f / (1 + Math.exp(-f[i])));
+        }
+    }
+
+    public static void softMax(float[] f) {
+        float total = 0;
+        float[] expArray = new float[f.length];
+        for (int i = 0; i < expArray.length; i++) {
+            expArray[i] = (float) Math.exp(f[i]);
+            total += expArray[i];
+        }
+        for (int i = 0; i < f.length; i++) {
+            f[i] = expArray[i] / total;
+        }
+    }
 }

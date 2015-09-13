@@ -1,13 +1,11 @@
 package suskun.nn;
 
 import java.io.*;
-
-
 /**
  * Copied from https://github.com/adamheinrich/native-utils
  * TODO: Remove this and make a simpler one.
  */
-public class NativeUtils {
+class NativeUtils {
 
 
     /**
@@ -25,7 +23,8 @@ public class NativeUtils {
      * @param path The filename inside JAR as absolute path (beginning with '/'), e.g. /package/File.ext
      * @throws IOException              If temporary file creation or read/write operation fails
      * @throws IllegalArgumentException If source file (param path) does not exist
-     * @throws IllegalArgumentException If the path is not absolute or if the filename is shorter than three characters (restriction of {@see File#createTempFile(java.lang.String, java.lang.String)}).
+     * @throws IllegalArgumentException If the path is not absolute or if the filename is shorter than three characters
+     * (restriction of {@see File#createTempFile(java.lang.String, java.lang.String)}).
      */
     public static void loadLibraryFromJar(String path) throws IOException {
 

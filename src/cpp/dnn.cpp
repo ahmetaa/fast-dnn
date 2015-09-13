@@ -18,7 +18,7 @@ using namespace std;
 
 int main() {
 
-    string fName = "/home/afsina/data/dnn-5-1024/dnn.tv.model";
+    string fName = "/home/afsina/data/dnn-5-1024/dnn.model";
     //string fName = "/home/afsina/data/dnn-5-1024/dnn.model.small";
     dnn::FloatDnn floatDnn(fName);
     //string featureName = "/home/afsina/projects/suskun/feats-test";
@@ -46,7 +46,7 @@ namespace dnn {
 
     const float WEIGHT_MULTIPLIER = 127;
 
-    const float MAX_WEIGHT_THRESHOLD = 3;
+    const float MAX_WEIGHT_THRESHOLD = 2;
 
     inline void *aligned_malloc(size_t align, size_t size) {
         void *result;
