@@ -25,22 +25,6 @@ public class FastNativeDnn {
         return make2d(res1d, input.length, outputSize);
     }
 
-    public static float[][] loadInputData(File file) throws IOException {
-        try (DataInputStream dis = new DataInputStream(new BufferedInputStream(new FileInputStream(file)))) {
-            int frameCount = dis.readInt();
-            int dimension = dis.readInt();
-
-            float[][] data = new float[frameCount][];
-            for (int i = 0; i < frameCount; i++) {
-                data[i] = new float[dimension];
-                for (int j = 0; j < dimension; j++) {
-                    data[i][j] = dis.readFloat();
-                }
-            }
-            return data;
-        }
-    }
-
     private float[] flatten(float[][] arr2d) {
         int vecCount = arr2d.length;
         int dimension = arr2d[0].length;
@@ -59,15 +43,14 @@ public class FastNativeDnn {
         return res;
     }
 
-
     public static void main(String[] args) throws IOException {
         FastNativeDnn dnn = new FastNativeDnn();
-        dnn.initialize("/home/afsina/data/dnn-5-1024/dnn.model");
-        float[][] input = loadInputData(new File("/home/afsina/projects/suskun/feats"));
+        dnn.initialize("data/dnn.model");
+        float[][] input = BatchData.loadFromText(new File("data/8khz")).alignDimension(4).getAsFloatMatrix();
 
         for (int i = 0; i < 1; i++) {
             long start = System.currentTimeMillis();
-            float[][] result = dnn.calculate(input, 4055);
+            float[][] result = dnn.calculate(input, 4046);
 
             for (int j = 0; j < input.length; j++) {
                 float[] out = result[j];

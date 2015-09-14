@@ -45,6 +45,14 @@ class BatchData implements Comparable<BatchData> {
         }
     }
 
+    public float[][] getAsFloatMatrix() {
+        float[][] matrix = new float[data.size()][];
+        for (int i = 0; i < matrix.length; i++) {
+            matrix[i] = data.get(i).getCopyOfData();
+        }
+        return matrix;
+    }
+
     public int vectorCount() {
         return data.size();
     }
@@ -105,6 +113,14 @@ class BatchData implements Comparable<BatchData> {
         }
     }
 
+    public BatchData alignDimension(int alignment) {
+        for (FloatData floatData : data) {
+            floatData.replaceData(FloatData.alignTo(floatData.getData(), alignment));
+        }
+        return this;
+    }
+
+
     public void serializeDataMatrix(DataOutputStream dos, boolean bigEndian, int featureAmount) throws IOException {
         if (data.size() == 0) {
             throw new IllegalStateException("There is no data to serialize.");
@@ -115,12 +131,14 @@ class BatchData implements Comparable<BatchData> {
 
         featureAmount = featureAmount < data.size() ? featureAmount : data.size();
 
+        int dimension = data.get(0).size();
+
         if (bigEndian) {
             dos.writeInt(featureAmount);
-            dos.writeInt(data.get(0).size());
+            dos.writeInt(dimension);
         } else {
             dos.writeInt(Integer.reverseBytes(featureAmount));
-            dos.writeInt(Integer.reverseBytes(data.get(0).size()));
+            dos.writeInt(Integer.reverseBytes(dimension));
         }
         int k = 0;
         for (FloatData floatData : data) {
@@ -151,7 +169,7 @@ class BatchData implements Comparable<BatchData> {
      * ....
      * ]
      */
-    public static List<BatchData> loadInputFromText(File featureFile) throws IOException {
+    public static List<BatchData> loadMultipleFromText(File featureFile) throws IOException {
 
         List<String> lines = Files.readAllLines(featureFile.toPath(), StandardCharsets.UTF_8);
         String wholeThing = String.join("\n", lines);
@@ -176,6 +194,11 @@ class BatchData implements Comparable<BatchData> {
         }
         return result;
     }
+
+    public static BatchData loadFromText(File featureFile) throws IOException {
+        return loadMultipleFromText(featureFile).get(0);
+    }
+
 
     public void saveAsTextFile(File file) throws IOException {
         try (PrintWriter pw = new PrintWriter(file, "UTF-8")) {

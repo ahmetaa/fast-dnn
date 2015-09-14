@@ -7,7 +7,6 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -217,16 +216,33 @@ public class FeedForwardNetwork {
     }
 
     public static class Layer {
-        public final float[][] weights;
-        public final float[] bias;
-        public final int inputDimension;
-        public final int outputDimension;
+        public float[][] weights;
+        public float[] bias;
+        public int inputDimension;
+        public int outputDimension;
 
         public Layer(float[][] weights, float[] bias) {
             this.weights = weights;
             this.bias = bias;
             this.inputDimension = weights[0].length;
             this.outputDimension = weights.length;
+        }
+
+        public void align(int inputAlignment, int outputAlignment) {
+            // align bias
+            bias = FloatData.alignTo(bias, outputAlignment);
+            int paddedOut = FloatData.alignedSize(weights.length, outputAlignment);
+            int paddedIn = FloatData.alignedSize(weights[0].length, inputAlignment);
+
+            float[][] aligned = new float[paddedOut][paddedIn];
+            for (int i = 0; i < paddedOut; i++) {
+                if (i < weights.length) {
+                    aligned[i] = Arrays.copyOf(weights[i], paddedIn);
+                } else {
+                    aligned[i] = new float[paddedIn];
+                }
+            }
+            this.weights = aligned;
         }
 
         public static Layer loadFromStream(DataInputStream dis) throws IOException {
@@ -338,8 +354,9 @@ public class FeedForwardNetwork {
 
     public static void main(String[] args) throws IOException {
         FeedForwardNetwork n = FeedForwardNetwork.loadFromBinary(new File("data/dnn.model"));
-        BatchData b = BatchData.loadInputFromText(new File("data/8khz")).get(0);
-        List<FloatData> first = new ArrayList<>(b.getData().subList(0,40));
+        System.out.println(n.info());
+        BatchData b = BatchData.loadMultipleFromText(new File("data/8khz")).get(0);
+        List<FloatData> first = new ArrayList<>(b.getData().subList(0, 40));
         List<FloatData> result = n.calculate(first);
         for (FloatData floatData : result) {
             System.out.println(floatData.toString(20));

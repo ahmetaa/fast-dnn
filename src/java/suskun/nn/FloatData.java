@@ -91,6 +91,10 @@ public class FloatData {
 
     }
 
+    public void replaceData(float[] data) {
+        this.data = data;
+    }
+
     /**
      * Create a copy of this.
      *
@@ -163,6 +167,23 @@ public class FloatData {
             if (i++ < input.length - 1) sb.append(delimiter);
         }
         return sb.toString().trim();
+    }
+
+    public static float[] alignTo(float[] input, int alignment) {
+        int dimension = input.length;
+
+        int padded = alignedSize(dimension, alignment);
+        if (padded==dimension) {
+            return input;
+        }
+        return Arrays.copyOf(input, padded);
+    }
+
+    public static int alignedSize(int size, int alignment) {
+        if (size % alignment == 0) {
+            return size;
+        }
+        return size + alignment - (size % alignment);
     }
 
 }
