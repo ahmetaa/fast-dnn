@@ -71,7 +71,7 @@ public class FastNativeDnn {
 
             for (int j = 0; j < input.length; j++) {
                 float[] out = result[j];
-                System.out.println(j + " " +dump(Arrays.copyOf(out, 20)));
+                System.out.println(j + " " + dump(Arrays.copyOf(out, 20)));
             }
 
             System.out.println(System.currentTimeMillis() - start);
