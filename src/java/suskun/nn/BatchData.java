@@ -154,7 +154,7 @@ class BatchData implements Comparable<BatchData> {
     public static List<BatchData> loadInputFromText(File featureFile) throws IOException {
 
         List<String> lines = Files.readAllLines(featureFile.toPath(), StandardCharsets.UTF_8);
-        String wholeThing = String.join(" ", lines);
+        String wholeThing = String.join("\n", lines);
 
         List<String> featureBlocks = firstGroupMatches(FEATURE_LINES_PATTERN, wholeThing);
         List<String> idLines = firstGroupMatches(ID_PATTERN, wholeThing);

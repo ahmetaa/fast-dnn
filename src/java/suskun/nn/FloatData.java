@@ -3,6 +3,7 @@ package suskun.nn;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Locale;
 
 /**
  * A generic class for carrying a float array and an index value attached to it.
@@ -26,7 +27,6 @@ public class FloatData {
     public float[] getCopyOfData() {
         return data.clone();
     }
-
 
     /**
      * Create a copy of this and replaces the data with newData
@@ -71,7 +71,6 @@ public class FloatData {
         data = Arrays.copyOf(data, newSize);
     }
 
-
     /**
      * @param dataToPrepend data to append
      * @return A new FloatData instance by prepending the input data to this FrameData
@@ -101,6 +100,13 @@ public class FloatData {
         return new FloatData(getCopyOfData(), index);
     }
 
+    public String toString() {
+        return index + " " + format(10, 5, " ", data);
+    }
+
+    public String toString(int amount) {
+        return index + " " + format(10, 5, " ", Arrays.copyOf(data, amount));
+    }
 
     public int size() {
         return data.length;
@@ -115,4 +121,48 @@ public class FloatData {
         dos.writeInt(size());
         FeedForwardNetwork.serializeRaw(dos, this.data);
     }
+
+    /**
+     * Formats a float array as string using English Locale.
+     */
+    public static String format(float... input) {
+        return format(10, 3, " ", input);
+    }
+
+    /**
+     * Formats a float array as string using English Locale.
+     */
+    public static String format(int fractionDigits, float... input) {
+        return format(fractionDigits, " ", input);
+    }
+
+    /**
+     * Formats a float array as string using English Locale.
+     */
+    public static String format(int fractionDigits, String delimiter, float... input) {
+        StringBuilder sb = new StringBuilder();
+        String formatStr = "%." + fractionDigits + "f";
+        int i = 0;
+        for (float v : input) {
+            sb.append(String.format(Locale.ENGLISH, formatStr, v));
+            if (i++ < input.length - 1) sb.append(delimiter);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Formats a float array as string using English Locale.
+     */
+    public static String format(int rightPad, int fractionDigits, String delimiter, float... input) {
+        StringBuilder sb = new StringBuilder();
+        String formatStr = "%." + fractionDigits + "f";
+        int i = 0;
+        for (float v : input) {
+            String num = String.format(formatStr, v);
+            sb.append(String.format(Locale.ENGLISH, "%-" + rightPad + "s", num));
+            if (i++ < input.length - 1) sb.append(delimiter);
+        }
+        return sb.toString().trim();
+    }
+
 }

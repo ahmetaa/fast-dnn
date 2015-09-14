@@ -87,8 +87,8 @@ public class FeedForwardNetwork {
         return new FeedForwardNetwork(layers, shiftVector, scaleVector);
     }
 
-    public void shiftAndScale(List<BatchData.FloatData> data) {
-        for (BatchData.FloatData floatData : data) {
+    public void shiftAndScale(List<FloatData> data) {
+        for (FloatData floatData : data) {
             float[] d = floatData.getData();
             for (int i = 0; i < d.length; i++) {
                 d[i] = (d[i] + shiftVector[i]) * scaleVector[i];
@@ -99,12 +99,12 @@ public class FeedForwardNetwork {
     /**
      * Calculates layer activations for multiple vectors.
      */
-    public List<BatchData.FloatData> calculate(List<BatchData.FloatData> inputVectors) {
-
-        List<BatchData.FloatData> input = inputVectors;
+    public List<FloatData> calculate(List<FloatData> inputVectors) {
+        shiftAndScale(inputVectors);
+        List<FloatData> input = inputVectors;
 
         for (Layer layer : layers) {
-            List<BatchData.FloatData> activations = layer.activations(input);
+            List<FloatData> activations = layer.activations(input);
             if (layer == outputLayer) {
                 softMax(activations);
                 return activations;
@@ -296,25 +296,24 @@ public class FeedForwardNetwork {
         /**
          * Calculates layer activations for multiple vectors.
          */
-        public List<BatchData.FloatData> activations(List<BatchData.FloatData> inputVectors) {
-            List<BatchData.FloatData> result = new ArrayList<>();
-            for (BatchData.FloatData inputVector : inputVectors) {
+        public List<FloatData> activations(List<FloatData> inputVectors) {
+            List<FloatData> result = new ArrayList<>();
+            for (FloatData inputVector : inputVectors) {
                 result.add(inputVector.copy(activations(inputVector.getData())));
             }
             return result;
         }
 
-
     }
 
-    public static void sigmoid(List<BatchData.FloatData> inputVectors) {
-        for (BatchData.FloatData inputVector : inputVectors) {
+    public static void sigmoid(List<FloatData> inputVectors) {
+        for (FloatData inputVector : inputVectors) {
             sigmoid(inputVector.getData());
         }
     }
 
-    public static void softMax(List<BatchData.FloatData> inputVectors) {
-        for (BatchData.FloatData inputVector : inputVectors) {
+    public static void softMax(List<FloatData> inputVectors) {
+        for (FloatData inputVector : inputVectors) {
             softMax(inputVector.getData());
         }
     }
@@ -334,6 +333,16 @@ public class FeedForwardNetwork {
         }
         for (int i = 0; i < f.length; i++) {
             f[i] = expArray[i] / total;
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        FeedForwardNetwork n = FeedForwardNetwork.loadFromBinary(new File("data/dnn.model"));
+        BatchData b = BatchData.loadInputFromText(new File("data/8khz")).get(0);
+        List<FloatData> first = new ArrayList<>(b.getData().subList(0,40));
+        List<FloatData> result = n.calculate(first);
+        for (FloatData floatData : result) {
+            System.out.println(floatData.toString(20));
         }
     }
 }
