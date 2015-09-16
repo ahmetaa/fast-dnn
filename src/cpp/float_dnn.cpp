@@ -105,23 +105,15 @@ namespace dnn {
         fclose(pFile);
     }
 
-    BatchData::BatchData(std::string fileName, int batchSize) {
+    BatchData::BatchData(std::string fileName) {
 
         BinaryLoader loader(fileName, false);
 
         int frameCount = loader.load_int();
         this->dimension = loader.load_int();
+        this->vectorCount = frameCount;
 
-        int paddedFrameCount = paddedSize(frameCount, batchSize);
-
-        this->vectorCount = paddedFrameCount;
-#ifdef DEBUG
-        cout << "Dimension = " << this->dimension << endl;
-        cout << "Input Frame count = " << frameCount << endl;
-        cout << "Input Padded Frame count = " << paddedFrameCount << endl;
-#endif
-
-        this->data = new float[this->dimension * paddedFrameCount]();
+        this->data = new float[this->dimension * frameCount]();
 
         int t = 0;
         for (int j = 0; j < frameCount; ++j) {
@@ -138,27 +130,4 @@ namespace dnn {
         this->vectorCount = vectorCount;
         this->dimension = dimension;
     }
-
-    BatchData::BatchData(float *input, int vectorCount, int dimension, int batchSize) {
-
-        this->dimension = dimension;
-        int paddedFrameCount = paddedSize(vectorCount, batchSize);
-        this->vectorCount = paddedFrameCount;
-
-        if (paddedFrameCount == vectorCount) {
-            this->data = input;
-
-        } else {
-            this->data = new float[this->dimension * paddedFrameCount]();
-
-            int t = 0;
-            for (int j = 0; j < vectorCount; ++j) {
-                for (int k = 0; k < this->dimension; ++k) {
-                    this->data[t] = input[t];
-                    t++;
-                }
-            }
-        }
-    }
-
 }

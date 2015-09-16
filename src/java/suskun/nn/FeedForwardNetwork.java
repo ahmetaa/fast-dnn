@@ -37,6 +37,16 @@ public class FeedForwardNetwork {
         return layers.get(layerIndex);
     }
 
+    public void align(int inputAlignment, int hiddenLayerAlignment) {
+        shiftVector = FloatData.alignTo(shiftVector, inputAlignment);
+        scaleVector = FloatData.alignTo(scaleVector, inputAlignment);
+        firstLayer.align(inputAlignment, hiddenLayerAlignment);
+        for (int i = 1; i < layers.size() - 1; i++) {
+            layers.get(i).align(hiddenLayerAlignment, hiddenLayerAlignment);
+        }
+        outputLayer.align(hiddenLayerAlignment, 1);
+    }
+
     public String info() {
         StringBuilder builder = new StringBuilder();
         int i = 0;
@@ -243,6 +253,8 @@ public class FeedForwardNetwork {
                 }
             }
             this.weights = aligned;
+            this.inputDimension = weights[0].length;
+            this.outputDimension = weights.length;
         }
 
         public static Layer loadFromStream(DataInputStream dis) throws IOException {
@@ -353,9 +365,15 @@ public class FeedForwardNetwork {
     }
 
     public static void main(String[] args) throws IOException {
-        FeedForwardNetwork n = FeedForwardNetwork.loadFromBinary(new File("data/dnn.model"));
+        FeedForwardNetwork n = FeedForwardNetwork.loadFromBinary(new File("data/dnn.aligned.model"));
+/*        System.out.println(n.info());
+        n.align(4,16);
+        n.saveBinary(new File("data/dnn.aligned.model"));*/
+
         System.out.println(n.info());
-        BatchData b = BatchData.loadMultipleFromText(new File("data/8khz")).get(0);
+        BatchData b = BatchData.loadRawBinary("a", new File("data/8khz.aligned.bin"));
+/*        b.alignDimension(4);
+        b.serializeDataMatrix(new File("data/8khz.aligned.bin"), -1);*/
         List<FloatData> first = new ArrayList<>(b.getData().subList(0, 40));
         List<FloatData> result = n.calculate(first);
         for (FloatData floatData : result) {

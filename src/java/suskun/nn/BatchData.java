@@ -121,6 +121,12 @@ class BatchData implements Comparable<BatchData> {
     }
 
 
+    public void serializeDataMatrix(File file, int featureAmount) throws IOException {
+        try (DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) {
+            serializeDataMatrix(dos, true, featureAmount);
+        }
+    }
+
     public void serializeDataMatrix(DataOutputStream dos, boolean bigEndian, int featureAmount) throws IOException {
         if (data.size() == 0) {
             throw new IllegalStateException("There is no data to serialize.");

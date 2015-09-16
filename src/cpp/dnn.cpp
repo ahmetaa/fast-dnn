@@ -18,12 +18,12 @@ using namespace std;
 
 int main() {
 
-    string fName = "/home/afsina/data/dnn-5-1024/dnn.model";
+    string fName = "/home/afsina/projects/fast-dnn/data/dnn.aligned.model";
     //string fName = "/home/afsina/data/dnn-5-1024/dnn.model.small";
     dnn::FloatDnn floatDnn(fName);
     //string featureName = "/home/afsina/projects/suskun/feats-test";
-    string featureName = "/home/afsina/projects/suskun/feats";
-    dnn::BatchData batchData(featureName, 8);
+    string featureName = "/home/afsina/projects/fast-dnn/data/8khz.aligned.bin";
+    dnn::BatchData batchData(featureName);
 
     dnn::QuantizedDnn qDnn(&floatDnn);
 
@@ -46,7 +46,7 @@ namespace dnn {
 
     const float WEIGHT_MULTIPLIER = 127;
 
-    const float MAX_WEIGHT_THRESHOLD = 2;
+    const float MAX_WEIGHT_THRESHOLD = 5;
 
     inline void *aligned_malloc(size_t align, size_t size) {
         void *result;
@@ -398,7 +398,14 @@ namespace dnn {
                 out[j] += biasArr[j];
             }
             softMax->apply(&outputs[i * outSize]);
+#ifdef DEBUG
+            if (i < 30) {
+                //cout << "softmax" << endl;
+                dnn::print_container(&outputs[i * outSize], 16);
+            }
+#endif
         }
+
         delete softMax;
 
         BatchData *result = new BatchData(

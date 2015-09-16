@@ -28,8 +28,7 @@ JNIEXPORT jfloatArray JNICALL Java_suskun_nn_FastNativeDnn_calculate
          jint batchSize) {
     dnn::BatchData batchData(env->GetFloatArrayElements(jInputFlattened, 0),
                              (int) inputVectorCount,
-                             (int) inputDimension,
-                             (int) batchSize);
+                             (int) inputDimension);
     //cout << "Batch data created." << endl;
     dnn::CalculationContext context(quantizedDnn, &batchData, batchSize);
     float *output = context.calculate();

@@ -45,8 +45,8 @@ public class FastNativeDnn {
 
     public static void main(String[] args) throws IOException {
         FastNativeDnn dnn = new FastNativeDnn();
-        dnn.initialize("data/dnn.model");
-        float[][] input = BatchData.loadFromText(new File("data/8khz")).alignDimension(4).getAsFloatMatrix();
+        dnn.initialize("data/dnn.aligned.model");
+        float[][] input = BatchData.loadRawBinary("a",new File("data/8khz.aligned.bin")).getAsFloatMatrix();
 
         for (int i = 0; i < 1; i++) {
             long start = System.currentTimeMillis();

@@ -48,9 +48,7 @@ namespace dnn {
         int dimension;
         int vectorCount;
 
-        BatchData(std::string fileName, int batchSize);
-
-        BatchData(float *input, int vectorCount, int dimension, int batchSize);
+        BatchData(std::string fileName);
 
         BatchData(float *input, int vectorCount, int dimension);
     };
