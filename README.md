@@ -13,7 +13,7 @@ For converting network:
 	  new File("feature_transform")
 	);
 
-First file represents the network, second represents the input transformation. Second file contains two vectors. Each input vector is transformed by adding the first vector and multiplying the second. Then padding and binartization is applied.
+First file represents the network, second represents the input transformation. Second file contains two vectors. Each input vector is transformed by adding the first vector and multiplying the second. Then padding and binarization is applied.
 
 	network.align(4,16); // pads input to a factor of 4 and hidden layer node counts to a factor of 16
 	network.saveBinary(new File("dnn.bin"));
@@ -35,7 +35,7 @@ In general, this network is about a magnitude of order faster than a naive C++/J
 
 ## TODO
 * Add Windows library
-* Make it ready for multiple threaded applications.
+* Make it ready for multi-threaded applications.
 * Fix memory leaks
 * Implement Lazy-Batch operation for last layer.
 * Implement PCA in Java API for network node reduction.
