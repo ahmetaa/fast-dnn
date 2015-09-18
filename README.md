@@ -1,6 +1,7 @@
 # fast-dnn
-This is a fast deep neural network library designed for DNNs used in Speech Recognition systems. But it probably can be applied to any feed forward NN.
-It improves the speed of the DNN calculations on CPU using SIMD instructions, linear quantization and batch processing. Ideas are taken from Vanhoucke et-al's [Improving the speed of neural networks on CPUs] (http://static.googleusercontent.com/media/research.google.com/en//pubs/archive/37631.pdf) paper. Library contains the C++ implementation and a Java API.
+This is a fast deep neural network library designed for DNNs used in Speech Recognition systems. But it probably can be applied to any feed forward NN. This is a runtime library, it is not designed for training DNNs.
+
+Implementation improves the speed of the DNN calculations on CPUs using SIMD instructions, linear quantization and batch processing. Ideas are taken from Vanhoucke et-al's [Improving the speed of neural networks on CPUs] (http://static.googleusercontent.com/media/research.google.com/en//pubs/archive/37631.pdf) paper. Library contains the C++ implementation and a Java API. 
 
 ## Basic usage
 First a proper DNN model file needs to be created. System uses a text DNN file and converts it to a binary form. For now, it accepts [Kaldi] (http://kaldi.sourceforge.net/dnn.html) style network files. Also, neural network input and hidden layer node sizes needs to be aligned to 4 and 16 respectively.
