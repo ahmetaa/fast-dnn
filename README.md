@@ -17,12 +17,15 @@ First file represents the network, second represents the input transformation. S
 	network.align(4,16); // pads input to a factor of 4 and hidden layer node counts to a factor of 16
 	network.saveBinary(new File("dnn.bin"));
 
-Operations below are offline. Once the network is ready, it is used via *QuantizedDnn* For runtime:
+Operations above are only required to run once and not required during runtime. Once the network is ready, it is used via *QuantizedDnn* in runtime:
 
 	QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("dnn.bin"));
 	System.out.println(dnn.inputDimension());
 	float[][] input = ... input vectors as a matrix. it must match input dimension
 	float[][] results = dnn.calculate(input); // output softmax result. 
+
+## Speed
+In general, this network is about a magnitude of order faster than a naive C++/Java implementation. According to my tests, it is more than 2 times faster than networks that uses BLAS (Via JBlas). BLAS uses optimization tricks and SIMD operations extensively. Once layz-batching is applied it will probably give a %30-%40 more relative speed improvement. This library allows usage of very large DNNs like the ones probably used by Google in recent years (5 2048 node hidden layers and 8000 output nodes). For small networks, speed difference may not be that important.
 
 ## Limitations
 * Only tested in Ubuntu Linux x86-64 (Event then, C++ side may need to be re-compiled). 
