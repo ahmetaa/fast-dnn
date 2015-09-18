@@ -17,15 +17,15 @@ First file represents the network, second represents the input transformation. S
 	network.align(4,16); // pads input to a factor of 4 and hidden layer node counts to a factor of 16
 	network.saveBinary(new File("dnn.bin"));
 
-Operations below are offline. Only one it needs to be run. For runtime:
+Operations below are offline. Once the network is ready, it is used via *QuantizedDnn* For runtime:
 
 	QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("dnn.bin"));
 	System.out.println(dnn.inputDimension());
 	float[][] input = ... input vectors as a matrix. it must match input dimension
-	float[][] nativeResult = dnn.calculate(input); // output softmax result. 
+	float[][] results = dnn.calculate(input); // output softmax result. 
 
 ## Limitations
-* Only tested in Ubuntu Linux x86-64. 
+* Only tested in Ubuntu Linux x86-64 (Event then, C++ side may need to be re-compiled). 
 * Works in CPU's with SSE4.2 support.
 * Hiden layers must be in equal size.
 * No network Training (Not planned)
