@@ -21,7 +21,6 @@ First file represents the network, second represents the input transformation. S
 Operations above are only required to run once and not required during runtime. Once the network is ready, it is used via *QuantizedDnn* in runtime:
 
 	QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("dnn.bin"));
-	System.out.println(dnn.inputDimension());
 	float[][] input = ... input vectors as a matrix. it must match input dimension
 	float[][] results = dnn.calculate(input); // output softmax result. 
 
