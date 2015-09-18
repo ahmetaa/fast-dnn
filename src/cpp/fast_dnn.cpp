@@ -19,6 +19,11 @@ dnn::CalculationContext getContext(float *input, int frameCount, int dimension, 
     return context;
 }
 
+JNIEXPORT jint JNICALL Java_suskun_nn_FastNativeDnn_inputDimension
+  (JNIEnv *env, jobject obj) {
+  return (jint) quantizedDnn->inputDimension();
+}
+
 JNIEXPORT jfloatArray JNICALL Java_suskun_nn_FastNativeDnn_calculate
         (JNIEnv *env,
          jobject obj,

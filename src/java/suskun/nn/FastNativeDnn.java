@@ -1,8 +1,26 @@
 package suskun.nn;
 
-import java.io.*;
-import java.util.Arrays;
+import java.io.File;
+import java.io.IOException;
 
+/**
+ * This is an optimized feed-forward neural network implementation that uses native code.
+ * Optimizations are based on
+ * - Vanhoucke et al's "Improving the speed of neural networks on CPUs" [2011]
+ * <p>
+ * Idea is to linearly quantize the weight and activation values to 8 bit values and use special SIMD instructions
+ * that uses 8 bit arguments. This not only allows more parameters to calculate in parallel with SIMD instructions
+ * but also improves memory throughput greatly.
+ * However, input layer weights are not quantized and bias values are quantized to 32 bits.
+ * Quantization is applied to each layer separately by taking the maximum weight magnitude and quantize to [-128, 127]
+ * Bias values are not quantized.
+ * <p>
+ * Batch processing. Instead of calculating one input vector at a time, multiple vectors are calculated.
+ * <p>
+ * Lazy processing (Not yet implemented): In the last layer, not all outputs are required to be calculated.
+ * So, only required outputs are calculated. This requires communication with the call side.
+ * <p>
+ */
 public class FastNativeDnn {
 
     static {
@@ -14,9 +32,17 @@ public class FastNativeDnn {
     }
 
     // generates the dnn network in native code from binary network file.
-    public native void initialize(String fileName);
+    private native void initialize(String fileName);
+
+    public static FastNativeDnn loadFromFile(File dnnFile) {
+        FastNativeDnn dnn = new FastNativeDnn();
+        dnn.initialize(dnnFile.getAbsolutePath());
+        return dnn;
+    }
 
     private native float[] calculate(float[] input, int inputVectorCount, int inputDimension, int batchSize);
+
+    public native int inputDimension();
 
     public float[][] calculate(float[][] input, int outputSize) {
         int dimension = input[0].length;
@@ -41,32 +67,6 @@ public class FastNativeDnn {
             System.arraycopy(arr, i * dimension, res[i], 0, dimension);
         }
         return res;
-    }
-
-    public static void main(String[] args) throws IOException {
-        FastNativeDnn dnn = new FastNativeDnn();
-        dnn.initialize("data/dnn.aligned.model");
-        float[][] input = BatchData.loadRawBinary("a",new File("data/8khz.aligned.bin")).getAsFloatMatrix();
-
-        for (int i = 0; i < 1; i++) {
-            long start = System.currentTimeMillis();
-            float[][] result = dnn.calculate(input, 4046);
-
-            for (int j = 0; j < input.length; j++) {
-                float[] out = result[j];
-                System.out.println(j + " " + dump(Arrays.copyOf(out, 20)));
-            }
-
-            System.out.println(System.currentTimeMillis() - start);
-        }
-    }
-
-    static String dump(float[] data) {
-        StringBuilder sb = new StringBuilder();
-        for (float v : data) {
-            sb.append(String.format("%.4f ", v));
-        }
-        return sb.toString();
     }
 
 }

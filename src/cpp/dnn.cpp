@@ -400,7 +400,6 @@ namespace dnn {
             softMax->apply(&outputs[i * outSize]);
 #ifdef DEBUG
             if (i < 30) {
-                //cout << "softmax" << endl;
                 dnn::print_container(&outputs[i * outSize], 16);
             }
 #endif

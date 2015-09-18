@@ -1,9 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project name="fast-dnn"  default="jni" basedir=".">
+<project name="fast-dnn"  default="jar" basedir=".">
 
     <property name="build.dir" location="build"/>
     <property name="src.dir" location="src/java"/>
+
+    <!--  compile to build dir -->
+    <target name="compile">
+        <delete dir="${build.dir}"/>
+        <mkdir dir="${build.dir}"/>
+        <javac
+                destdir="${build.dir}"
+                debug="true"
+                debuglevel="vars,lines,source">
+            <src path="${src.dir}"/>
+        </javac>
+        <copy todir="${build.dir}">
+            <fileset dir="${src.dir}">
+                <exclude name="**/*.java"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="jar" depends=" compile">
+        <jar file="fast-dnn.jar">
+            <fileset dir="${build.dir}"/>
+        </jar>
+    </target>
+
 
     <target name="jni">
         <mkdir dir="${build.dir}"/>

@@ -15,8 +15,8 @@ public class FeedForwardNetwork {
     private List<Layer> layers;
 
     // for convenience we have separate Layer object references for output and first hidden layer.
-    private Layer outputLayer;
-    private Layer firstLayer;
+    public final Layer outputLayer;
+    public final Layer firstLayer;
 
     // transpose of shift and scale vectors.
     // Shift matrix is added to input matrix and result is multiplied with scale matrix.
@@ -331,7 +331,6 @@ public class FeedForwardNetwork {
             }
             return result;
         }
-
     }
 
     public static void sigmoid(List<FloatData> inputVectors) {
@@ -361,23 +360,6 @@ public class FeedForwardNetwork {
         }
         for (int i = 0; i < f.length; i++) {
             f[i] = expArray[i] / total;
-        }
-    }
-
-    public static void main(String[] args) throws IOException {
-        FeedForwardNetwork n = FeedForwardNetwork.loadFromBinary(new File("data/dnn.aligned.model"));
-/*        System.out.println(n.info());
-        n.align(4,16);
-        n.saveBinary(new File("data/dnn.aligned.model"));*/
-
-        System.out.println(n.info());
-        BatchData b = BatchData.loadRawBinary("a", new File("data/8khz.aligned.bin"));
-/*        b.alignDimension(4);
-        b.serializeDataMatrix(new File("data/8khz.aligned.bin"), -1);*/
-        List<FloatData> first = new ArrayList<>(b.getData().subList(0, 40));
-        List<FloatData> result = n.calculate(first);
-        for (FloatData floatData : result) {
-            System.out.println(floatData.toString(20));
         }
     }
 }

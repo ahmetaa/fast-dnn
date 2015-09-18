@@ -23,6 +23,14 @@ JNIEXPORT void JNICALL Java_suskun_nn_FastNativeDnn_initialize
 JNIEXPORT jfloatArray JNICALL Java_suskun_nn_FastNativeDnn_calculate
   (JNIEnv *, jobject, jfloatArray, jint, jint, jint);
 
+/*
+ * Class:     suskun_nn_FastNativeDnn
+ * Method:    inputDimension
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL Java_suskun_nn_FastNativeDnn_inputDimension
+  (JNIEnv *, jobject);
+
 #ifdef __cplusplus
 }
 #endif
