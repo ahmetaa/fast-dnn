@@ -25,7 +25,7 @@ Operations above are only required to run once and not required during runtime. 
 	float[][] results = dnn.calculate(input); // output softmax result. 
 
 ## Speed
-In general, this network is about a magnitude of order faster than a naive C++/Java implementation. According to my tests, it is more than 2 times faster than networks that uses BLAS (Via JBlas). BLAS uses optimization tricks and SIMD operations extensively. Once layz-batching is applied it will probably give a %30-%40 more relative speed improvement. This library allows usage of very large DNNs like the ones probably used by Google in recent years (4-5 2048 node hidden layers and 8000 output nodes). For small networks, speed difference may not be significant.
+In general, this network is about a magnitude of order faster than a naive C++/Java implementation. According to my tests, it is more than 2 times faster than networks that uses BLAS (Via JBlas). BLAS uses optimization tricks and SIMD operations extensively. Once lazy-batching is applied it will probably give a %30-%40 more relative speed improvement. This library allows usage of very large DNNs like the ones probably used by Google in recent years (4-5 2048 node hidden layers and 8000 output nodes). For small networks, speed difference may not be significant.
 
 ## Limitations
 * Only tested in Ubuntu Linux x86-64 (Event then, C++ side may need to be re-compiled). 
