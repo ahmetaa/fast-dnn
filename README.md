@@ -32,7 +32,6 @@ In general, this network is about a magnitude of order faster than a naive C++/J
 * Only tested in Ubuntu Linux x86-64 (Event then, C++ side may need to be re-compiled). 
 * Works in CPU's with SSE4.2 support.
 * Hiden layers must be in equal size.
-* No network Training (Not planned)
 
 ## TODO
 * Add Windows library
@@ -40,5 +39,5 @@ In general, this network is about a magnitude of order faster than a naive C++/J
 * Fix memory leaks
 * Implement Lazy-Batch operation for last layer.
 * Implement PCA in Java API for network node reduction.
-* Implement exp lookup for faster soft-max operation.
+* Implement log and exp lookup for faster soft-max - log operations.
 * Implement ReLu activation quantization network (later)
