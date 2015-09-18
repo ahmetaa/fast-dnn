@@ -377,7 +377,7 @@ namespace dnn {
     BatchData *CalculationContext::calculateOutput() {
 
         // allocate for output.
-        const int outSize = this->dnn->outputSize();
+        const int outSize = this->dnn->outputDimension();
         float *outputs = dnn::float_alloc(this->input->vectorCount * outSize);
 
         // calculate in batches.

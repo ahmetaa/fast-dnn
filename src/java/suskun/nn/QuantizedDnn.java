@@ -21,7 +21,7 @@ import java.io.IOException;
  * So, only required outputs are calculated. This requires communication with the call side.
  * <p>
  */
-public class FastNativeDnn {
+public class QuantizedDnn {
 
     static {
         try {
@@ -31,12 +31,17 @@ public class FastNativeDnn {
         }
     }
 
+    int inputDimension;
+    int outputDimension;
+
     // generates the dnn network in native code from binary network file.
     private native void initialize(String fileName);
 
-    public static FastNativeDnn loadFromFile(File dnnFile) {
-        FastNativeDnn dnn = new FastNativeDnn();
+    public static QuantizedDnn loadFromFile(File dnnFile) {
+        QuantizedDnn dnn = new QuantizedDnn();
         dnn.initialize(dnnFile.getAbsolutePath());
+        dnn.inputDimension = dnn.inputDimension();
+        dnn.outputDimension = dnn.outputDimension();
         return dnn;
     }
 
@@ -44,11 +49,13 @@ public class FastNativeDnn {
 
     public native int inputDimension();
 
-    public float[][] calculate(float[][] input, int outputSize) {
+    public native int outputDimension();
+
+    public float[][] calculate(float[][] input) {
         int dimension = input[0].length;
         float[] flattened = flatten(input);
         float[] res1d = calculate(flattened, input.length, dimension, 8);
-        return make2d(res1d, input.length, outputSize);
+        return make2d(res1d, input.length, outputDimension);
     }
 
     private float[] flatten(float[][] arr2d) {

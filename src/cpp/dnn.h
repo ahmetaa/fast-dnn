@@ -108,7 +108,7 @@ namespace dnn {
 
         QuantizedDnn(FloatDnn *floatDnn);
 
-        int outputSize() {
+        int outputDimension() {
             return this->outputLayer->nodeCount;
         }
 

@@ -22,10 +22,10 @@ public class FuncTest {
 
     public static void calculateError() throws IOException {
 
-        FastNativeDnn dnn = FastNativeDnn.loadFromFile(new File("data/dnn.tv.model"));
+        QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.tv.model"));
         System.out.println(dnn.inputDimension());
         float[][] input = BatchData.loadRawBinary("a", new File("data/16khz.bin")).getAsFloatMatrix();
-        float[][] nativeResult = dnn.calculate(input, 4055);
+        float[][] nativeResult = dnn.calculate(input);
         System.out.println("Native calculated.");
 
         FeedForwardNetwork n = FeedForwardNetwork.loadFromBinary(new File("data/dnn.tv.model"));

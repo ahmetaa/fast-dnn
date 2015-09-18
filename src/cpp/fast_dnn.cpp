@@ -1,12 +1,12 @@
 #include "float_dnn.h"
 #include "dnn.h"
 #include "handle.h"
-#include "suskun_nn_FastNativeDnn.h"
+#include "suskun_nn_QuantizedDnn.h"
 
 dnn::FloatDnn *floatDnn;
 dnn::QuantizedDnn *quantizedDnn;
 
-JNIEXPORT void JNICALL Java_suskun_nn_FastNativeDnn_initialize
+JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_initialize
         (JNIEnv *env, jobject obj, jstring str) {
     const char *kstr = env->GetStringUTFChars(str, 0);
     floatDnn = new dnn::FloatDnn(std::string(kstr));
@@ -19,12 +19,17 @@ dnn::CalculationContext getContext(float *input, int frameCount, int dimension, 
     return context;
 }
 
-JNIEXPORT jint JNICALL Java_suskun_nn_FastNativeDnn_inputDimension
+JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_inputDimension
   (JNIEnv *env, jobject obj) {
   return (jint) quantizedDnn->inputDimension();
 }
 
-JNIEXPORT jfloatArray JNICALL Java_suskun_nn_FastNativeDnn_calculate
+JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_outputDimension
+        (JNIEnv *env, jobject obj) {
+    return (jint) quantizedDnn->outputDimension();
+}
+
+JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculate
         (JNIEnv *env,
          jobject obj,
          jfloatArray jInputFlattened,
@@ -34,12 +39,9 @@ JNIEXPORT jfloatArray JNICALL Java_suskun_nn_FastNativeDnn_calculate
     dnn::BatchData batchData(env->GetFloatArrayElements(jInputFlattened, 0),
                              (int) inputVectorCount,
                              (int) inputDimension);
-    //cout << "Batch data created." << endl;
     dnn::CalculationContext context(quantizedDnn, &batchData, batchSize);
     float *output = context.calculate();
-    //cout << "done calculation" << endl;
-    int len = batchData.vectorCount * quantizedDnn->outputSize();
-    //cout << "length is " << len << endl;
+    int len = batchData.vectorCount * quantizedDnn->outputDimension();
     jfloatArray result = env->NewFloatArray(len);
     env->SetFloatArrayRegion(result, 0, len, output);
     return result;

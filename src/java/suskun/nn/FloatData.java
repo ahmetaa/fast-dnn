@@ -8,7 +8,7 @@ import java.util.Locale;
 /**
  * A generic class for carrying a float array and an index value attached to it.
  */
-public class FloatData {
+class FloatData {
 
     private float[] data;
     public final int index;

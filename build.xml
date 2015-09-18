@@ -40,7 +40,7 @@
                 srcdir="${src.dir}"
                 includes="suskun/nn/FastNativeDnn.java">
         </javac>
-        <javah destdir="src/cpp" classpath="${build.dir}" class="suskun.nn.FastNativeDnn"/>
+        <javah destdir="src/cpp" classpath="${build.dir}" class="suskun.nn.QuantizedDnn"/>
     </target>
 
 </project>
