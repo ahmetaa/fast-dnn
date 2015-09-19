@@ -35,7 +35,7 @@ public class QuantizedDnn {
     int outputDimension;
 
     // generates the dnn network in native code from binary network file.
-    private native void initialize(String fileName);
+    native void initialize(String fileName);
 
     public static QuantizedDnn loadFromFile(File dnnFile) {
         QuantizedDnn dnn = new QuantizedDnn();
@@ -45,7 +45,11 @@ public class QuantizedDnn {
         return dnn;
     }
 
-    private native float[] calculate(float[] input, int inputVectorCount, int inputDimension, int batchSize);
+    native long getContext(int inputVectorCount, int inputDimension, int batchSize);
+
+    native void calculateUntilOutput(long contextHandle, float[] input);
+
+    native float[] calculate(float[] input, int inputVectorCount, int inputDimension, int batchSize);
 
     public native int inputDimension();
 
@@ -53,12 +57,12 @@ public class QuantizedDnn {
 
     public float[][] calculate(float[][] input) {
         int dimension = input[0].length;
-        float[] flattened = flatten(input);
+        float[] flattened = toMatrix(input);
         float[] res1d = calculate(flattened, input.length, dimension, 8);
-        return make2d(res1d, input.length, outputDimension);
+        return toVector(res1d, input.length, outputDimension);
     }
 
-    private float[] flatten(float[][] arr2d) {
+    private float[] toMatrix(float[][] arr2d) {
         int vecCount = arr2d.length;
         int dimension = arr2d[0].length;
         float[] res = new float[vecCount * dimension];
@@ -68,7 +72,7 @@ public class QuantizedDnn {
         return res;
     }
 
-    private float[][] make2d(float[] arr, int vectorSize, int dimension) {
+    private float[][] toVector(float[] arr, int vectorSize, int dimension) {
         float[][] res = new float[vectorSize][dimension];
         for (int i = 0; i < vectorSize; i++) {
             System.arraycopy(arr, i * dimension, res[i], 0, dimension);

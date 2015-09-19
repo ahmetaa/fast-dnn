@@ -29,8 +29,7 @@
     </target>
 
 
-    <target name="jni">
-        <mkdir dir="${build.dir}"/>
+    <target name="jni" depends="compile">
         <javac
                 destdir="${build.dir}"
                 debug="true"

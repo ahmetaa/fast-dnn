@@ -68,7 +68,7 @@ namespace dnn {
     public:
         __m128 *weights;
         float *bias;
-        int inputDim;
+        int inputDimension;
         int nodeCount;
 
         FloatSimdLayer() { };
@@ -113,7 +113,7 @@ namespace dnn {
         }
 
         int inputDimension() {
-            return inputLayer->inputDim;
+            return inputLayer->inputDimension;
         }
 
         ~QuantizedDnn() {
@@ -131,7 +131,9 @@ namespace dnn {
     class CalculationContext {
     public:
         QuantizedDnn *dnn;
-        BatchData *input;
+       // BatchData *input;
+
+        int inputCount;
 
         // represents the amount of input vectors that outputs will be calculated in one pass.
         int batchSize;
@@ -146,13 +148,13 @@ namespace dnn {
         // this is actually a flattened two dimensional array.
         float *activations;
 
-        CalculationContext(QuantizedDnn *dnn, BatchData *input, int batchSize);
+        CalculationContext(QuantizedDnn *dnn, int inputCount, int batchSize);
 
-        void lastHiddenLayerActivations();
+        void lastHiddenLayerActivations(BatchData *input);
 
         void quantizedLayerActivations(QuantizedSimdLayer *layer, int batchStartIndex, float *sequentialActivations);
 
-        void inputActivations(int batchIndex);
+        void inputActivations(BatchData* input, int batchIndex);
 
         void addBias(float *bias);
 
@@ -162,9 +164,9 @@ namespace dnn {
 
         BatchData *calculateOutput();
 
-        void test();
+        void test(BatchData* input);
 
-        float* calculate();
+        float* calculate(BatchData* input);
     };
 }
 #endif //DNN_DNN_H

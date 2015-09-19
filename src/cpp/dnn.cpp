@@ -27,9 +27,9 @@ int main() {
 
     dnn::QuantizedDnn qDnn(&floatDnn);
 
-    dnn::CalculationContext context(&qDnn, &batchData, 8);
+    dnn::CalculationContext context(&qDnn, batchData.vectorCount, 8);
 
-    context.test();
+    context.test(&batchData);
 
     return 0;
 }
@@ -101,9 +101,9 @@ namespace dnn {
     FloatSimdLayer::FloatSimdLayer(FloatLayer *floatLayer) {
 
         this->nodeCount = floatLayer->nodeCount;
-        this->inputDim = floatLayer->inputDim;
+        this->inputDimension = floatLayer->inputDim;
 
-        const int simdVectorDim = this->inputDim / 4;
+        const int simdVectorDim = this->inputDimension / 4;
 
         this->weights = dnn::SIMD_alloc(this->nodeCount * simdVectorDim);
 
@@ -157,13 +157,13 @@ namespace dnn {
         print_container(&temp, 4);
     }
 
-    void CalculationContext::test() {
+    void CalculationContext::test(BatchData *input) {
 
         typedef std::chrono::high_resolution_clock Clock;
         typedef std::chrono::milliseconds milliseconds;
 
         Clock::time_point t0 = Clock::now();
-        this->lastHiddenLayerActivations();
+        this->lastHiddenLayerActivations(input);
         this->calculateOutput();
         Clock::time_point t1 = Clock::now();
         milliseconds ms = std::chrono::duration_cast<milliseconds>(t1 - t0);
@@ -171,9 +171,9 @@ namespace dnn {
         std::cout << "Elapsed:" << ms.count() << std::endl;
     }
 
-    float *CalculationContext::calculate() {
+    float *CalculationContext::calculate(BatchData* input) {
         //cout << "Hidden Layers " << endl;
-        this->lastHiddenLayerActivations();
+        this->lastHiddenLayerActivations(input);
         //cout << "Output Layer " << endl;
         BatchData *output = calculateOutput();
         //cout << "Output Calculated " << endl;
@@ -205,22 +205,23 @@ namespace dnn {
         }
     }
 
-    CalculationContext::CalculationContext(QuantizedDnn *dnn, BatchData *input, int batchSize) {
+    CalculationContext::CalculationContext(QuantizedDnn *dnn, int inputCount, int batchSize) {
         this->dnn = dnn;
-        this->input = input;
         this->batchSize = batchSize;
         this->hiddenNodeCount = this->dnn->layers[1].nodeCount;
+        this->inputCount = inputCount;
 
         // allocate for float activations. Only batch amount.
         this->activations = dnn::float_alloc(this->hiddenNodeCount * batchSize);
 
         // allocate for quantized unsigned char input values.
-        this->quantizedActivations = (unsigned char *) dnn::byte_alloc(this->hiddenNodeCount * input->vectorCount);
+        this->quantizedActivations = (unsigned char *) dnn::byte_alloc(this->hiddenNodeCount * inputCount);
     }
 
-    void CalculationContext::inputActivations(int batchIndex) {
 
-        const int dimension = this->input->dimension;
+    void CalculationContext::inputActivations(BatchData* inputData, int batchIndex) {
+
+        const int dimension =this->dnn->inputDimension();
         const int vectorInputSize = dimension / 4;
 
         // for each node.
@@ -228,11 +229,11 @@ namespace dnn {
 
         for (int i = 0; i < this->hiddenNodeCount; ++i) {
 
-            float *input = &this->input->data[batchIndex * dimension];
+            float *input = &inputData->data[batchIndex * dimension];
 
             // for inputs in the batch.
             for (int j = 0; j < this->batchSize; ++j) {
-                if (j + batchIndex >= this->input->vectorCount)
+                if (j + batchIndex >= inputData->vectorCount)
                     break;
                 __m128 sum = _mm_setzero_ps();
 
@@ -278,7 +279,7 @@ namespace dnn {
 
         // for all activations calculated from the input batch,
         for (int k = 0; k < this->batchSize; k++) {
-            if (k + batchIndex >= this->input->vectorCount)
+            if (k + batchIndex >= this->inputCount)
                 break;
             // calculate quantized sigmoid. And write the result
             for (int i = 0; i < this->hiddenNodeCount; ++i) {
@@ -311,7 +312,7 @@ namespace dnn {
 
             // for inputs in the batch.
             for (int k = 0; k < this->batchSize; k++) {
-                if (k + batchStartIndex >= this->input->vectorCount)
+                if (k + batchStartIndex >= this->inputCount)
                     break;
 
                 // set sum to 0
@@ -349,15 +350,15 @@ namespace dnn {
         return _mm_extract_epi32(x, 0);
     }
 
-    void CalculationContext::lastHiddenLayerActivations() {
+    void CalculationContext::lastHiddenLayerActivations(BatchData *input) {
 
-        this->dnn->applyShiftAndScale(this->input);
+        this->dnn->applyShiftAndScale(input);
 
         const int frameCount = input->vectorCount;
 
         // calculate input layer in batches.
         for (int i = 0; i < frameCount; i += batchSize) {
-            inputActivations(i);
+            inputActivations(input, i);
             addBias(this->dnn->inputLayer->bias);
             quantizedSigmoid(i);
         }
@@ -378,10 +379,10 @@ namespace dnn {
 
         // allocate for output.
         const int outSize = this->dnn->outputDimension();
-        float *outputs = dnn::float_alloc(this->input->vectorCount * outSize);
+        float *outputs = dnn::float_alloc(this->inputCount * outSize);
 
         // calculate in batches.
-        for (int i = 0; i < this->input->vectorCount; i += batchSize) {
+        for (int i = 0; i < this->inputCount; i += batchSize) {
             quantizedLayerActivations(this->dnn->outputLayer, i, &outputs[i * outSize]);
         }
 
@@ -391,7 +392,7 @@ namespace dnn {
         // add bias and apply soft max.
         SoftMax *softMax = new SoftMax(outSize);
 
-        for (int i = 0; i < this->input->vectorCount; i++) {
+        for (int i = 0; i < this->inputCount; i++) {
             float *out = &outputs[i * outSize];
             for (int j = 0; j < outSize; ++j) {
                 // for inputs in the batch.
@@ -409,7 +410,7 @@ namespace dnn {
 
         BatchData *result = new BatchData(
                 outputs,
-                this->input->vectorCount,
+                this->inputCount,
                 outSize
         );
 
@@ -419,7 +420,7 @@ namespace dnn {
 
 
     void FloatSimdLayer::validate() {
-        const int vectorInputSize = this->inputDim / 4;
+        const int vectorInputSize = this->inputDimension / 4;
 
         __m128 *w = weights;
         for (int i = 0; i < this->nodeCount; ++i) {

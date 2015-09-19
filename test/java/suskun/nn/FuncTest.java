@@ -25,8 +25,9 @@ public class FuncTest {
         QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.tv.model"));
         System.out.println(dnn.inputDimension());
         float[][] input = BatchData.loadRawBinary("a", new File("data/16khz.bin")).getAsFloatMatrix();
+        long start = System.currentTimeMillis();
         float[][] nativeResult = dnn.calculate(input);
-        System.out.println("Native calculated.");
+        System.out.println("Native calculated in: " + (System.currentTimeMillis() - start));
 
         FeedForwardNetwork n = FeedForwardNetwork.loadFromBinary(new File("data/dnn.tv.model"));
         BatchData b = BatchData.loadRawBinary("a", new File("data/16khz.bin"));
@@ -44,7 +45,7 @@ public class FuncTest {
         }
 
         for (float v : dif) {
-            if (v > 0.001)
+            if (v > 0.1)
                 System.out.println(v);
         }
 

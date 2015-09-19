@@ -17,6 +17,22 @@ JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_initialize
 
 /*
  * Class:     suskun_nn_QuantizedDnn
+ * Method:    getContext
+ * Signature: (III)J
+ */
+JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_getContext
+  (JNIEnv *, jobject, jint, jint, jint);
+
+/*
+ * Class:     suskun_nn_QuantizedDnn
+ * Method:    calculateUntilOutput
+ * Signature: (J[F)V
+ */
+JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_calculateUntilOutput
+  (JNIEnv *, jobject, jlong, jfloatArray);
+
+/*
+ * Class:     suskun_nn_QuantizedDnn
  * Method:    calculate
  * Signature: ([FIII)[F
  */
