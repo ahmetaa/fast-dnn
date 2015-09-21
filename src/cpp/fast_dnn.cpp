@@ -13,20 +13,20 @@ JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_initialize
     quantizedDnn = new dnn::QuantizedDnn(floatDnn);
 }
 
+// TODO: not implemented yet.
 JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_getContext
         (JNIEnv *env,
          jobject obj,
          jint inputVectorCount,
          jint inputDimension,
          jint batchSize) {
-
 }
 
+// TODO: not implemented yet.
 JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_calculateUntilOutput
         (JNIEnv *env, jobject obj, jlong handle, jfloatArray input) {
 
 }
-
 
 JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_inputDimension
         (JNIEnv *env, jobject obj) {

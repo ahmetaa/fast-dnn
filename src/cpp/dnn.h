@@ -131,7 +131,7 @@ namespace dnn {
     class CalculationContext {
     public:
         QuantizedDnn *dnn;
-       // BatchData *input;
+        // BatchData *input;
 
         int inputCount;
 
@@ -154,7 +154,7 @@ namespace dnn {
 
         void quantizedLayerActivations(QuantizedSimdLayer *layer, int batchStartIndex, float *sequentialActivations);
 
-        void inputActivations(BatchData* input, int batchIndex);
+        void inputActivations(BatchData *input, int batchIndex);
 
         void addBias(float *bias);
 
@@ -164,9 +164,14 @@ namespace dnn {
 
         BatchData *calculateOutput();
 
-        void test(BatchData* input);
+        void test(BatchData *input);
 
-        float* calculate(BatchData* input);
+        float *calculate(BatchData *input);
+
+        float *lazyOutputActivations(
+                int batchStartIndex,
+                int *outputNodes,
+                int outputCount);
     };
 }
 #endif //DNN_DNN_H

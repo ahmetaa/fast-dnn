@@ -44,6 +44,8 @@ namespace dnn {
 
     static inline int __horizontalSumInt32(__m128i x);
 
+    static float inline quantizedNodeSum(int vectorSize, unsigned char *quantizedInput, __m128i *weights);
+
     const float WEIGHT_MULTIPLIER = 127;
 
     const float MAX_WEIGHT_THRESHOLD = 5;
@@ -171,7 +173,7 @@ namespace dnn {
         std::cout << "Elapsed:" << ms.count() << std::endl;
     }
 
-    float *CalculationContext::calculate(BatchData* input) {
+    float *CalculationContext::calculate(BatchData *input) {
         //cout << "Hidden Layers " << endl;
         this->lastHiddenLayerActivations(input);
         //cout << "Output Layer " << endl;
@@ -219,9 +221,9 @@ namespace dnn {
     }
 
 
-    void CalculationContext::inputActivations(BatchData* inputData, int batchIndex) {
+    void CalculationContext::inputActivations(BatchData *inputData, int batchIndex) {
 
-        const int dimension =this->dnn->inputDimension();
+        const int dimension = this->dnn->inputDimension();
         const int vectorInputSize = dimension / 4;
 
         // for each node.
@@ -308,39 +310,89 @@ namespace dnn {
         // for each node
         for (int i = 0; i < nodeCount; ++i) {
 
-            const unsigned char *input = &this->quantizedActivations[batchStartIndex * layer->inputDim];
+            unsigned char *input = &this->quantizedActivations[batchStartIndex * layer->inputDim];
 
             // for inputs in the batch.
             for (int k = 0; k < this->batchSize; k++) {
                 if (k + batchStartIndex >= this->inputCount)
                     break;
 
-                // set sum to 0
-                __m128i sum = _mm_setzero_si128();
+                float sum = dnn::quantizedNodeSum(vectorSize, input, w);
 
-                // loop for input_dimension/16 times. (Because we quantized to 1 byte)
-                for (int j = 0; j < vectorSize; ++j) {
-                    // load quantized unsigned char input values.
-                    const __m128i inputVec = _mm_load_si128((__m128i *) &input[j * 16]);
-                    // c = saturate(i[0]*w[0]+i[1]*w[1]), saturate(i[2]*w[2]+i[3]*w[3]),..., saturate(i[14]*w[14]+i[15]*w[15])
-                    // c contains eight 16 bit value.
-                    const __m128i c = _mm_maddubs_epi16(inputVec, w[j]);
-                    // unpack 4 lowest 16 bit values to 32 bits.
-                    const __m128i lo = _mm_cvtepi16_epi32(c);
-                    // unpack 4 highest 16 bit values to 32 bits.
-                    const __m128i hi = _mm_cvtepi16_epi32(_mm_shuffle_epi32(c, 0x4e));
-                    // add them to sum.
-                    sum = _mm_add_epi32(_mm_add_epi32(lo, hi), sum);
-                }
-                // here we sum all 32 bit integers to a single 32 bit value. then We calculate the float value of the activation.
-
-                int i1 = k * nodeCount + i;
-                activations[i1] =
-                        ((float) dnn::__horizontalSumInt32(sum)) / dequantizationCoefficient;
+                const int i1 = k * nodeCount + i;
+                activations[i1] = sum / dequantizationCoefficient;
                 input += layer->inputDim;
 
             }
             w += vectorSize;
+        }
+    }
+
+    static float inline quantizedNodeSum(int vectorSize, unsigned char *quantizedInput, __m128i *weights) {
+        // set sum to 0
+        __m128i sum = _mm_setzero_si128();
+
+        // loop for input_dimension/16 times. (Because we quantized to 1 byte)
+        for (int j = 0; j < vectorSize; ++j) {
+            // load quantized unsigned char input values.
+            const __m128i inputVec = _mm_load_si128((__m128i *) &quantizedInput[j * 16]);
+            // c = saturate(i[0]*w[0]+i[1]*w[1]), saturate(i[2]*w[2]+i[3]*w[3]),..., saturate(i[14]*w[14]+i[15]*w[15])
+            // c contains eight 16 bit value.
+            const __m128i c = _mm_maddubs_epi16(inputVec, weights[j]);
+            // unpack 4 lowest 16 bit values to 32 bits.
+            const __m128i lo = _mm_cvtepi16_epi32(c);
+            // unpack 4 highest 16 bit values to 32 bits.
+            const __m128i hi = _mm_cvtepi16_epi32(_mm_shuffle_epi32(c, 0x4e));
+            // add them to sum.
+            sum = _mm_add_epi32(_mm_add_epi32(lo, hi), sum);
+        }
+        return dnn::__horizontalSumInt32(sum);
+    }
+
+    /* Calculates activations for a set of output nodes against batch size of inputs.
+     * Result is a one dimensional array that carries the [output_node_size * batch_size]
+     * output node set is usually a small amount for speech recognition applications.
+     */
+    float *CalculationContext::lazyOutputActivations(
+            int batchStartIndex,
+            int *outputNodes,
+            int outputCount) {
+
+        // we do this only for output.
+        QuantizedSimdLayer *layer = this->dnn->outputLayer;
+        //
+        const int vectorSize = layer->inputDim / 16;
+
+        const float dequantizationCoefficient = layer->multiplier * dnn::SIGMOID_QUANTIZATION_MULTIPLIER;
+        float *result = new float[outputCount * this->batchSize];
+
+        int outputNodeCounter = 0;
+        // for each node
+        for (size_t i = 0; i < outputCount; ++i) {
+
+            // get weights of the current output.
+            int outputIndex = outputNodes[i];
+            __m128i *w = &layer->weights[outputIndex * vectorSize];
+
+            // input batch start.
+            unsigned char *input = &this->quantizedActivations[batchStartIndex * layer->inputDim];
+
+            // for inputs in the batch.
+            for (int k = 0; k < this->batchSize; k++) {
+
+                if (k + batchStartIndex >= this->inputCount)
+                    break;
+
+                float sum = dnn::quantizedNodeSum(vectorSize, input, w);
+
+                // we set the result for current output [s[0:0],s[1:0],...,s[0,1],s[1:1],...,s[0,batchSize],s[1:batchSize]]
+                // for s[node:input]
+                result[outputCount * k + i] = sum / dequantizationCoefficient;
+
+                // next input.
+                input += layer->inputDim;
+            }
+            outputNodeCounter++;
         }
     }
 

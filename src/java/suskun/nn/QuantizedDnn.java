@@ -45,9 +45,12 @@ public class QuantizedDnn {
         return dnn;
     }
 
+    // TODO: not implemented yet.
     native long getContext(int inputVectorCount, int inputDimension, int batchSize);
-
+    // TODO: not implemented yet.
     native void calculateUntilOutput(long contextHandle, float[] input);
+    // TODO: not implemented yet.
+    native float[] calculateForOutputs(long contextHandle, int inputIndex, int[] outputIndexes);
 
     native float[] calculate(float[] input, int inputVectorCount, int inputDimension, int batchSize);
 
