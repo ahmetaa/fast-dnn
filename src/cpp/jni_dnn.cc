@@ -6,8 +6,8 @@ dnn::QuantizedDnn *quantizedDnn;
 
 JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_initialize
         (JNIEnv *env, jobject obj, jstring str) {
-    const std::string kstr(env->GetStringUTFChars(str, 0));
-    const dnn::FloatDnn floatDnn(kstr);
+    const std::string modelPath(env->GetStringUTFChars(str, 0));
+    const dnn::FloatDnn floatDnn(modelPath);
     quantizedDnn = new dnn::QuantizedDnn(floatDnn);
     //TODO: float DNN must be freed.
 }
