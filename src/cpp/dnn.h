@@ -91,7 +91,7 @@ namespace dnn {
 
         QuantizedSimdLayer() { };
 
-        QuantizedSimdLayer(FloatLayer *floatLayer);
+        QuantizedSimdLayer(const FloatLayer &floatLayer);
 
     };
 
@@ -106,7 +106,7 @@ namespace dnn {
         __m128 *shift;
         __m128 *scale;
 
-        QuantizedDnn(FloatDnn *floatDnn);
+        QuantizedDnn(const FloatDnn &floatDnn);
 
         int outputDimension() {
             return this->outputLayer->nodeCount;
@@ -175,5 +175,3 @@ namespace dnn {
     };
 }
 #endif //DNN_DNN_H
-
-
