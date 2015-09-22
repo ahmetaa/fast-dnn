@@ -23,7 +23,6 @@ public class FuncTest {
     public static void calculateError() throws IOException {
 
         QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.tv.model"));
-        System.out.println(dnn.inputDimension());
         float[][] input = BatchData.loadRawBinary("a", new File("data/16khz.bin")).getAsFloatMatrix();
         long start = System.currentTimeMillis();
         float[][] nativeResult = dnn.calculate(input);
@@ -48,7 +47,6 @@ public class FuncTest {
             if (v > 0.1)
                 System.out.println(v);
         }
-
     }
 
     static String dump(float[] data) {

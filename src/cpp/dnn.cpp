@@ -18,11 +18,9 @@ using namespace std;
 
 int main() {
 
-    string fName = "/home/afsina/projects/fast-dnn/data/dnn.aligned.model";
-    //string fName = "/home/afsina/data/dnn-5-1024/dnn.model.small";
+    string fName = "/home/afsina/projects/fast-dnn/data/dnn.tv.model";
     const dnn::FloatDnn floatDnn(fName);
-    //string featureName = "/home/afsina/projects/suskun/feats-test";
-    string featureName = "/home/afsina/projects/fast-dnn/data/8khz.aligned.bin";
+    string featureName = "/home/afsina/projects/fast-dnn/data/16khz.bin";
     dnn::BatchData batchData(featureName);
 
     dnn::QuantizedDnn qDnn(floatDnn);
