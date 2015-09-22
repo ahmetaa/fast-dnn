@@ -20,12 +20,12 @@ int main() {
 
     string fName = "/home/afsina/projects/fast-dnn/data/dnn.aligned.model";
     //string fName = "/home/afsina/data/dnn-5-1024/dnn.model.small";
-    dnn::FloatDnn floatDnn(fName);
+    const dnn::FloatDnn floatDnn(fName);
     //string featureName = "/home/afsina/projects/suskun/feats-test";
     string featureName = "/home/afsina/projects/fast-dnn/data/8khz.aligned.bin";
     dnn::BatchData batchData(featureName);
 
-    dnn::QuantizedDnn qDnn(&floatDnn);
+    dnn::QuantizedDnn qDnn(floatDnn);
 
     dnn::CalculationContext context(&qDnn, batchData.vectorCount, 8);
 
@@ -489,17 +489,17 @@ namespace dnn {
         }
     }
 
-    QuantizedSimdLayer::QuantizedSimdLayer(FloatLayer *floatLayer) {
+    QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer) {
 
-        this->nodeCount = floatLayer->nodeCount;
-        this->inputDim = floatLayer->inputDim;
+        this->nodeCount = floatLayer.nodeCount;
+        this->inputDim = floatLayer.inputDim;
         float maxWeight = MAX_WEIGHT_THRESHOLD;
         float minWeight = -MAX_WEIGHT_THRESHOLD;
 
         // find maximum absolute value in the layer
         float max = -numeric_limits<float>::max();
-        for (int i = 0; i < floatLayer->inputDim; ++i) {
-            float nodeMax = dnn::absMax(floatLayer->weights[i], floatLayer->inputDim, minWeight, maxWeight);
+        for (int i = 0; i < floatLayer.inputDim; ++i) {
+            float nodeMax = dnn::absMax(floatLayer.weights[i], floatLayer.inputDim, minWeight, maxWeight);
             if (nodeMax > max) {
                 max = nodeMax;
             }
@@ -508,7 +508,7 @@ namespace dnn {
         // find linear quantization multiplier
         this->multiplier = dnn::WEIGHT_MULTIPLIER / max;
 
-        const int inputSimdVectorSize = floatLayer->inputDim / 16;
+        const int inputSimdVectorSize = floatLayer.inputDim / 16;
 
         //allocate SIMD registers for `char` valued weights. Total amount is nodecount*input dim.
         this->weights = dnn::SIMD_i_alloc(this->nodeCount * inputSimdVectorSize);
@@ -520,11 +520,11 @@ namespace dnn {
 
             char *quantizedWeights;
             // align allocated memory for quantized Weights.
-            quantizedWeights = dnn::byte_alloc(floatLayer->inputDim);
+            quantizedWeights = dnn::byte_alloc(floatLayer.inputDim);
 
             // 8 bit weight quantization
-            for (int k = 0; k < floatLayer->inputDim; ++k) {
-                float f = floatLayer->weights[i][k];
+            for (int k = 0; k < floatLayer.inputDim; ++k) {
+                float f = floatLayer.weights[i][k];
                 if (f < minWeight) {
                     f = minWeight;
                 }
@@ -541,27 +541,25 @@ namespace dnn {
             w += inputSimdVectorSize;
         }
 
-        this->bias = new float[floatLayer->nodeCount];
+        this->bias = new float[floatLayer.nodeCount];
         // copy the bias values. We do not apply quantization.
-        std::copy(floatLayer->bias, floatLayer->bias + floatLayer->nodeCount, this->bias);
+        std::copy(floatLayer.bias, floatLayer.bias + floatLayer.nodeCount, this->bias);
 
     }
 
-    QuantizedDnn::QuantizedDnn(FloatDnn *floatDnn) {
-        this->inputLayer = new FloatSimdLayer(floatDnn->inputLayer);
+    QuantizedDnn::QuantizedDnn(const FloatDnn &floatDnn) {
+        this->inputLayer = new FloatSimdLayer(floatDnn.inputLayer);
         this->layers = std::vector<QuantizedSimdLayer>();
-        this->layers.reserve((unsigned long) (floatDnn->layerCount() - 1)); // we only put hidden layers
+        this->layers.reserve((unsigned long) (floatDnn.layerCount() - 1)); // we only put hidden layers
 
-        for (int i = 1; i < floatDnn->layerCount(); i++) {
-            QuantizedSimdLayer layer(&floatDnn->layers[i]);
+        for (int i = 1; i < floatDnn.layerCount(); i++) {
+            QuantizedSimdLayer layer(floatDnn.layers[i]);
             this->layers.push_back(layer);
         }
 
         this->outputLayer = &this->layers[layers.size() - 1];
-
-        this->shift = dnn::getSimdFloat(floatDnn->shift, floatDnn->inputDimension());
-        this->scale = dnn::getSimdFloat(floatDnn->scale, floatDnn->inputDimension());
-
+        this->shift = dnn::getSimdFloat(floatDnn.shift, floatDnn.inputDimension());
+        this->scale = dnn::getSimdFloat(floatDnn.scale, floatDnn.inputDimension());
     }
 
     void SoftMax::apply(float *input) {
@@ -576,4 +574,3 @@ namespace dnn {
         }
     }
 }
-

@@ -110,13 +110,14 @@ namespace dnn {
 
         FloatLayer() { };
 
-        FloatLayer(float **weights, float *bias, int inputDim, int nodeCount) : weights(weights), bias(bias),
-                                                                                inputDim(inputDim),
-                                                                                nodeCount(nodeCount) { }
+        FloatLayer(float **weights, float *bias, int inputDim, int nodeCount) :
+            weights(weights),
+            bias(bias),
+            inputDim(inputDim),
+            nodeCount(nodeCount) { }
 
         ~FloatLayer() {
         }
-
     };
 
 // DNN with 32 bit floating numbers.
@@ -130,15 +131,15 @@ namespace dnn {
 
         FloatDnn(std::string fileName);
 
-        long outputSize() {
+        long outputSize() const {
             return this->layers[this->layers.size() - 1].nodeCount;
         }
 
-        int inputDimension() {
+        int inputDimension() const {
             return inputLayer->inputDim;
         }
 
-        int layerCount() {
+        int layerCount() const {
             return (int) layers.size();
         }
 
