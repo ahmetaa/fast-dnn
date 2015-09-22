@@ -2,14 +2,14 @@
 #include "dnn.h"
 #include "suskun_nn_QuantizedDnn.h"
 
-dnn::FloatDnn *floatDnn;
 dnn::QuantizedDnn *quantizedDnn;
 
 JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_initialize
         (JNIEnv *env, jobject obj, jstring str) {
-    const char *kstr = env->GetStringUTFChars(str, 0);
-    floatDnn = new dnn::FloatDnn(std::string(kstr));
-    quantizedDnn = new dnn::QuantizedDnn(*floatDnn);
+    const std::string kstr(env->GetStringUTFChars(str, 0));
+    const dnn::FloatDnn floatDnn(kstr);
+    quantizedDnn = new dnn::QuantizedDnn(floatDnn);
+    //TODO: float DNN must be freed.
 }
 
 // TODO: not implemented yet.

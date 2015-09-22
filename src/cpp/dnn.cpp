@@ -392,6 +392,8 @@ namespace dnn {
             }
             outputNodeCounter++;
         }
+
+        return result;
     }
 
     static inline int __horizontalSumInt32(__m128i x) {
@@ -548,7 +550,7 @@ namespace dnn {
     QuantizedDnn::QuantizedDnn(const FloatDnn &floatDnn) {
         this->inputLayer = new FloatSimdLayer(floatDnn.inputLayer);
         this->layers = std::vector<QuantizedSimdLayer>();
-        this->layers.reserve((unsigned long) (floatDnn.layerCount() - 1)); // we only put hidden layers
+        this->layers.reserve((unsigned long) (floatDnn.layerCount() - 1));
 
         for (int i = 1; i < floatDnn.layerCount(); i++) {
             QuantizedSimdLayer layer(floatDnn.layers[i]);

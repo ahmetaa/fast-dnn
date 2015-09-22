@@ -30,8 +30,9 @@ public class FuncTest {
 
         FeedForwardNetwork n = FeedForwardNetwork.loadFromBinary(new File("data/dnn.tv.model"));
         BatchData b = BatchData.loadRawBinary("a", new File("data/16khz.bin"));
+        start = System.currentTimeMillis();
         List<FloatData> result = n.calculate(b.getData());
-        System.out.println("Java calculated.");
+        System.out.println("Java calculated in: " + (System.currentTimeMillis() - start));
 
         float[] dif = new float[n.outputLayer.outputDimension];
 
