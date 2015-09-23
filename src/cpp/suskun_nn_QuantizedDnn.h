@@ -18,10 +18,10 @@ JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_initialize
 /*
  * Class:     suskun_nn_QuantizedDnn
  * Method:    getContext
- * Signature: (III)J
+ * Signature: (II)J
  */
 JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_getContext
-  (JNIEnv *, jobject, jint, jint, jint);
+  (JNIEnv *, jobject, jint, jint);
 
 /*
  * Class:     suskun_nn_QuantizedDnn

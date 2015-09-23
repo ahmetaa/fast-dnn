@@ -11,9 +11,8 @@ import java.io.IOException;
  * Idea is to linearly quantize the weight and activation values to 8 bit values and use special SIMD instructions
  * that uses 8 bit arguments. This not only allows more parameters to calculate in parallel with SIMD instructions
  * but also improves memory throughput greatly.
- * However, input layer weights are not quantized and bias values are quantized to 32 bits.
+ * However, input layer weights and all bias values are not quantized.
  * Quantization is applied to each layer separately by taking the maximum weight magnitude and quantize to [-128, 127]
- * Bias values are not quantized.
  * <p>
  * Batch processing. Instead of calculating one input vector at a time, multiple vectors are calculated.
  * <p>
@@ -45,11 +44,33 @@ public class QuantizedDnn {
         return dnn;
     }
 
-    // TODO: not implemented yet.
-    native long getContext(int inputVectorCount, int inputDimension, int batchSize);
-    // TODO: not implemented yet.
+    public static class Context {
+        QuantizedDnn dnn;
+        long handle;
+
+        public Context(QuantizedDnn dnn, long handle) {
+            this.dnn = dnn;
+            this.handle = handle;
+        }
+
+        public void calculateUntilOutput(float[][] input) {
+            dnn.calculateUntilOutput(handle, toVector(input));
+        }
+
+        public float[] calculateForOutputNodes(int inputVectorIndex, int[] nodeIndexes) {
+            return dnn.calculateForOutputs(handle, inputVectorIndex, nodeIndexes);
+        }
+    }
+
+    public Context getNewContext(int inputVectorCount, int batchSize) {
+        long handle = getContext(inputVectorCount, batchSize);
+        return new Context(this, handle);
+    }
+
+    native long getContext(int inputVectorCount, int batchSize);
+
     native void calculateUntilOutput(long contextHandle, float[] input);
-    // TODO: not implemented yet.
+
     native float[] calculateForOutputs(long contextHandle, int inputIndex, int[] outputIndexes);
 
     native float[] calculate(float[] input, int inputVectorCount, int inputDimension, int batchSize);
@@ -60,12 +81,12 @@ public class QuantizedDnn {
 
     public float[][] calculate(float[][] input) {
         int dimension = input[0].length;
-        float[] flattened = toMatrix(input);
+        float[] flattened = toVector(input);
         float[] res1d = calculate(flattened, input.length, dimension, 8);
-        return toVector(res1d, input.length, outputDimension);
+        return toMatrix(res1d, input.length, outputDimension);
     }
 
-    private float[] toMatrix(float[][] arr2d) {
+    private static float[] toVector(float[][] arr2d) {
         int vecCount = arr2d.length;
         int dimension = arr2d[0].length;
         float[] res = new float[vecCount * dimension];
@@ -75,7 +96,7 @@ public class QuantizedDnn {
         return res;
     }
 
-    private float[][] toVector(float[] arr, int vectorSize, int dimension) {
+    private static float[][] toMatrix(float[] arr, int vectorSize, int dimension) {
         float[][] res = new float[vectorSize][dimension];
         for (int i = 0; i < vectorSize; i++) {
             System.arraycopy(arr, i * dimension, res[i], 0, dimension);

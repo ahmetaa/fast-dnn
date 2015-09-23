@@ -2,6 +2,7 @@ package suskun.nn;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 public class FuncTest {
@@ -50,6 +51,22 @@ public class FuncTest {
         }
     }
 
+    static void lazyTest() throws IOException {
+        QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.tv.model"));
+        float[][] input = BatchData.loadRawBinary("a", new File("data/16khz.bin")).getAsFloatMatrix();
+        QuantizedDnn.Context context = dnn.getNewContext(input.length, 8);
+        context.calculateUntilOutput(input);
+
+        int[] outputIndexes = new int[50];
+        for(int i = 0; i<50;i++) {
+            outputIndexes[i] = i*2;
+        }
+        for (int i = 0; i < input.length; i++) {
+            float[] result = context.calculateForOutputNodes(i, outputIndexes);
+            System.out.println(Arrays.toString(result));
+        }
+    }
+
     static String dump(float[] data) {
         StringBuilder sb = new StringBuilder();
         for (float v : data) {
@@ -61,6 +78,7 @@ public class FuncTest {
     public static void main(String[] args) throws IOException {
         //generateNN();
         //generateAlignedInput();
-        calculateError();
+        //calculateError();
+        lazyTest();
     }
 }

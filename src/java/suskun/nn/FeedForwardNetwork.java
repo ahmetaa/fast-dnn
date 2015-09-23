@@ -1,6 +1,5 @@
 package suskun.nn;
 
-
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -10,6 +9,9 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Used for neural network file plumbing and verification.
+ */
 public class FeedForwardNetwork {
     // layers contain all weight and bias values.
     private List<Layer> layers;
