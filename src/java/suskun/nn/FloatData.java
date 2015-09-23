@@ -48,60 +48,8 @@ class FloatData {
         return new FloatData(newData, index);
     }
 
-    /**
-     * Appends the `dataToAppend` to data.
-     */
-    public void appendInPlace(float[] dataToAppend) {
-        this.data = Arrays.copyOf(data, data.length + dataToAppend.length);
-    }
-
-    /**
-     * Returns a new FloatData object. if newSize is more than the size, zeroes are appended.
-     * if newSize is less than size, cropped copy is generated. In any case a new float array is generated.
-     */
-    public FloatData resize(int newSize) {
-        float[] newData = Arrays.copyOf(data, newSize);
-        return new FloatData(newData, index);
-    }
-
-    /**
-     * Changes the size of the data array. A `newSize` is smaller than data size, data array will be truncated.
-     */
-    public void resizeInPlace(int newSize) {
-        data = Arrays.copyOf(data, newSize);
-    }
-
-    /**
-     * @param dataToPrepend data to append
-     * @return A new FloatData instance by prepending the input data to this FrameData
-     */
-    public FloatData prepend(float[] dataToPrepend) {
-        float[] newData = Arrays.copyOf(dataToPrepend, data.length + dataToPrepend.length);
-        System.arraycopy(data, 0, newData, dataToPrepend.length, data.length);
-        return new FloatData(newData, index);
-    }
-
-    /**
-     * prepends the `dataToPrepend` to the data.
-     */
-    public void prependInPlace(float[] dataToPrepend) {
-        float[] newData = Arrays.copyOf(dataToPrepend, data.length + dataToPrepend.length);
-        System.arraycopy(data, 0, newData, dataToPrepend.length, data.length);
-        data = newData;
-
-    }
-
     public void replaceData(float[] data) {
         this.data = data;
-    }
-
-    /**
-     * Create a copy of this.
-     *
-     * @return a copy of this FloatData but with newData
-     */
-    public FloatData copy() {
-        return new FloatData(getCopyOfData(), index);
     }
 
     public String toString() {
@@ -124,34 +72,6 @@ class FloatData {
         dos.writeInt(this.index);
         dos.writeInt(size());
         FeedForwardNetwork.serializeRaw(dos, this.data);
-    }
-
-    /**
-     * Formats a float array as string using English Locale.
-     */
-    public static String format(float... input) {
-        return format(10, 3, " ", input);
-    }
-
-    /**
-     * Formats a float array as string using English Locale.
-     */
-    public static String format(int fractionDigits, float... input) {
-        return format(fractionDigits, " ", input);
-    }
-
-    /**
-     * Formats a float array as string using English Locale.
-     */
-    public static String format(int fractionDigits, String delimiter, float... input) {
-        StringBuilder sb = new StringBuilder();
-        String formatStr = "%." + fractionDigits + "f";
-        int i = 0;
-        for (float v : input) {
-            sb.append(String.format(Locale.ENGLISH, formatStr, v));
-            if (i++ < input.length - 1) sb.append(delimiter);
-        }
-        return sb.toString();
     }
 
     /**

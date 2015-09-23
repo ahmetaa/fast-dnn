@@ -77,29 +77,6 @@ class BatchData implements Comparable<BatchData> {
         return sb.toString();
     }
 
-    /**
-     * Saves data to stream with this format.
-     * <pre>
-     *     [id] UTF
-     *     [frame count] int32 BE
-     *       [frame id] int32 BE
-     *       [data] float32 BE
-     *       ...
-     *       [data]
-     *       [frame id] int32 BE
-     *       [data]
-     *       ...
-     *       [data]
-     * </pre>
-     */
-    public void saveBinaryToStream(DataOutputStream dos) throws IOException {
-        dos.writeUTF(id);
-        dos.write(data.size());
-        for (FloatData floatData : data) {
-            floatData.serializeToBinaryStream(dos);
-        }
-    }
-
     public static BatchData loadRawBinary(String id, File binaryFile) throws IOException {
         try (DataInputStream dis = new DataInputStream(new BufferedInputStream(new FileInputStream(binaryFile)))) {
             int featureAmount = dis.readInt();
@@ -224,13 +201,6 @@ class BatchData implements Comparable<BatchData> {
     /**
      * Formats a float array as string using English Locale.
      */
-    public static String format(float... input) {
-        return format(10, 3, " ", input);
-    }
-
-    /**
-     * Formats a float array as string using English Locale.
-     */
     public static String format(int fractionDigits, float... input) {
         return format(fractionDigits, " ", input);
     }
@@ -247,21 +217,6 @@ class BatchData implements Comparable<BatchData> {
             if (i++ < input.length - 1) sb.append(delimiter);
         }
         return sb.toString();
-    }
-
-    /**
-     * Formats a float array as string using English Locale.
-     */
-    public static String format(int rightPad, int fractionDigits, String delimiter, float... input) {
-        StringBuilder sb = new StringBuilder();
-        String formatStr = "%." + fractionDigits + "f";
-        int i = 0;
-        for (float v : input) {
-            String num = String.format(formatStr, v);
-            sb.append(String.format(Locale.ENGLISH, "%-" + rightPad + "s", num));
-            if (i++ < input.length - 1) sb.append(delimiter);
-        }
-        return sb.toString().trim();
     }
 
     public static float[] fromString(String str, String delimiter) {
