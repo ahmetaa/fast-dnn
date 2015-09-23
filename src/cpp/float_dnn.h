@@ -89,6 +89,10 @@ namespace dnn {
             return values;
         }
 
+        ~BinaryLoader() {
+            delete[] content;
+        }
+
     private:
         // convert value to big endian representation
         int toBigEndian(int num) {
@@ -117,6 +121,8 @@ namespace dnn {
             nodeCount(nodeCount) { }
 
         ~FloatLayer() {
+            delete[] weights;
+            delete bias;
         }
     };
 
@@ -125,14 +131,14 @@ namespace dnn {
 
     public:
         FloatLayer *inputLayer;
-        std::vector<FloatLayer> layers;
+        std::vector<FloatLayer*> layers;
         float *shift;
         float *scale;
 
         FloatDnn(std::string fileName);
 
         long outputSize() const {
-            return this->layers[this->layers.size() - 1].nodeCount;
+            return this->layers[this->layers.size() - 1]->nodeCount;
         }
 
         int inputDimension() const {
@@ -144,6 +150,12 @@ namespace dnn {
         }
 
         ~FloatDnn() {
+            for(FloatLayer *layer : layers) {
+                delete layer;
+            }
+            delete shift;
+            delete scale;
+
         }
     };
 

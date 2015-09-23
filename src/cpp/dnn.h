@@ -101,7 +101,7 @@ namespace dnn {
 
     public:
         FloatSimdLayer *inputLayer;
-        std::vector<QuantizedSimdLayer> layers;
+        std::vector<QuantizedSimdLayer*> layers;
         QuantizedSimdLayer *outputLayer;
         __m128 *shift;
         __m128 *scale;

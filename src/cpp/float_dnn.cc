@@ -12,26 +12,26 @@ namespace dnn {
 
     FloatDnn::FloatDnn(std::string fileName) {
 
-        BinaryLoader loader(fileName, false);
+        BinaryLoader *loader  = new BinaryLoader(fileName, false);
 
-        int layerCount = loader.load_int();
+        int layerCount = loader->load_int();
 
 #ifdef DEBUG
         cout << "Layer count = " << layerCount << endl;
 #endif
 
-        this->layers = std::vector<FloatLayer>((unsigned long) layerCount);
+        this->layers = std::vector<FloatLayer*>((unsigned long) layerCount);
         int actualInputDimension = 0;
 
         for (int j = 0; j < layerCount; j++) {
 
-            int inputDimension = loader.load_int();
+            int inputDimension = loader->load_int();
             if (j == 0) {
                 actualInputDimension = inputDimension;
             }
             // make sure input is a factor of 4 for the first layer
             int paddedInputDim = j == 0 ? dnn::paddedSize(inputDimension, 4) : inputDimension;
-            int outputDimension = loader.load_int();
+            int outputDimension = loader->load_int();
 
 #ifdef DEBUG
             cout << "Layer " << j << " input dimension = " << inputDimension << endl;
@@ -45,7 +45,7 @@ namespace dnn {
             for (int oo = 0; oo < outputDimension; oo++) {
                 weights[oo] = new float[paddedInputDim];
                 for (int ii = 0; ii < paddedInputDim; ii++) {
-                    float d = ii < inputDimension ? loader.load_float() : 0;
+                    float d = ii < inputDimension ? loader->load_float() : 0;
                     weights[oo][ii] = d;
                 }
             }
@@ -53,25 +53,24 @@ namespace dnn {
             // load bias values.
             float *bias = new float[outputDimension];
             for (int ii = 0; ii < outputDimension; ii++) {
-                bias[ii] = loader.load_float();
+                bias[ii] = loader->load_float();
             }
 
-            FloatLayer layer(weights, bias, paddedInputDim, outputDimension);
+            dnn::FloatLayer *layer = new dnn::FloatLayer(weights, bias, paddedInputDim, outputDimension);
             layers[j] = layer;
         }
 
         // set input layer reference.
-        this->inputLayer = &layers[0];
+        this->inputLayer = layers[0];
 
         // load shift vector. This is added to input vector.
-        this->shift = loader.loadFloatArray(actualInputDimension, this->inputLayer->inputDim);
+        this->shift = loader->loadFloatArray(actualInputDimension, this->inputLayer->inputDim);
 
 
         // load scale vector. This is multiplied to input vector.
-        this->scale = loader.loadFloatArray(actualInputDimension, this->inputLayer->inputDim);
+        this->scale = loader->loadFloatArray(actualInputDimension, this->inputLayer->inputDim);
 
-        //TODO: should we free the loader content?
-
+        delete loader;
     }
 
     int paddedSize(int num, int div) {
@@ -107,10 +106,10 @@ namespace dnn {
 
     BatchData::BatchData(std::string fileName) {
 
-        BinaryLoader loader(fileName, false);
+        BinaryLoader *loader = new BinaryLoader(fileName, false);
 
-        int frameCount = loader.load_int();
-        this->dimension = loader.load_int();
+        int frameCount = loader->load_int();
+        this->dimension = loader->load_int();
         this->vectorCount = frameCount;
 
         this->data = new float[this->dimension * frameCount]();
@@ -118,11 +117,13 @@ namespace dnn {
         int t = 0;
         for (int j = 0; j < frameCount; ++j) {
             for (int k = 0; k < this->dimension; ++k) {
-                float d = loader.load_float();
+                float d = loader->load_float();
                 this->data[t] = d;
                 t++;
             }
         }
+
+        delete loader;
     }
 
     BatchData::BatchData(float *input, int vectorCount, int dimension) {

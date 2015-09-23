@@ -208,7 +208,7 @@ namespace dnn {
     CalculationContext::CalculationContext(QuantizedDnn *dnn, int inputCount, int batchSize) {
         this->dnn = dnn;
         this->batchSize = batchSize;
-        this->hiddenNodeCount = this->dnn->layers[1].nodeCount;
+        this->hiddenNodeCount = this->dnn->layers[1]->nodeCount;
         this->inputCount = inputCount;
 
         // allocate for float activations. Only batch amount.
@@ -417,7 +417,7 @@ namespace dnn {
 
         // calculate hidden layer activations, except the output.
         for (int j = 0; j < this->dnn->layerCount() - 1; ++j) {
-            QuantizedSimdLayer *layer = &this->dnn->layers[j];
+            QuantizedSimdLayer *layer = this->dnn->layers[j];
 
             for (int i = 0; i < frameCount; i += batchSize) {
                 quantizedLayerActivations(layer, i, this->activations);
@@ -549,15 +549,15 @@ namespace dnn {
 
     QuantizedDnn::QuantizedDnn(const FloatDnn &floatDnn) {
         this->inputLayer = new FloatSimdLayer(floatDnn.inputLayer);
-        this->layers = std::vector<QuantizedSimdLayer>();
+        this->layers = std::vector<QuantizedSimdLayer*>();
         this->layers.reserve((unsigned long) (floatDnn.layerCount() - 1));
 
         for (int i = 1; i < floatDnn.layerCount(); i++) {
-            QuantizedSimdLayer layer(floatDnn.layers[i]);
+            dnn::QuantizedSimdLayer *layer = new dnn::QuantizedSimdLayer(*floatDnn.layers[i]);
             this->layers.push_back(layer);
         }
 
-        this->outputLayer = &this->layers[layers.size() - 1];
+        this->outputLayer = this->layers[layers.size() - 1];
         this->shift = dnn::getSimdFloat(floatDnn.shift, floatDnn.inputDimension());
         this->scale = dnn::getSimdFloat(floatDnn.scale, floatDnn.inputDimension());
     }
