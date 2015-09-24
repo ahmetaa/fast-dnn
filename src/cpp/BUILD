@@ -4,7 +4,7 @@
 # bazel build src/cpp:dnn
 cc_library(
     name = "dnn",
-    srcs = ["dnn.cpp"],
+    srcs = ["dnn.cc"],
     hdrs = ["dnn.h"],
     copts = [
         "-mtune=native",
