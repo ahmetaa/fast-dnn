@@ -2,6 +2,7 @@ package suskun.nn;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * This is an optimized feed-forward neural network implementation that uses native code.
@@ -45,12 +46,24 @@ public class QuantizedDnn {
     }
 
     public static class Context {
-        QuantizedDnn dnn;
+        final QuantizedDnn dnn;
         long handle;
+        final int inputVectorCount;
+        final int bufferSize;
+        int currentBufferIndex;
+        final float[][] resultBuffer;
+        int currentVectorIndex;
+        float[] softMaxExponential;
+        int[] indexesArray;
 
-        public Context(QuantizedDnn dnn, long handle) {
+        public Context(QuantizedDnn dnn, long handle, int inputVectorCount, int bufferSize) {
             this.dnn = dnn;
             this.handle = handle;
+            this.inputVectorCount = inputVectorCount;
+            this.bufferSize = bufferSize;
+            this.resultBuffer = new float[bufferSize][dnn.outputDimension];
+            this.softMaxExponential = new float[dnn.outputDimension];
+            this.indexesArray= new int[dnn.outputDimension];
         }
 
         public void calculateUntilOutput(float[][] input) {
@@ -60,11 +73,82 @@ public class QuantizedDnn {
         public float[] calculateForOutputNodes(int inputVectorIndex, int[] nodeIndexes) {
             return dnn.calculateForOutputs(handle, inputVectorIndex, nodeIndexes);
         }
+
+        private int[] byteMaskToIndexes(byte[] mask, int activeNodeCount) {
+            int[] nodeIndexes = new int[activeNodeCount];
+            int i = 0, j = 0;
+            for (byte b : mask) {
+                if (b == 1)
+                    nodeIndexes[j++] = i;
+                i++;
+            }
+            return nodeIndexes;
+        }
+
+        public float[] calculateForOutputNodes(byte[] activeNodesMask) {
+
+            // before starting, discard the previous results because new results may be written there.
+            if (currentVectorIndex > 0) {
+                int previousIndex = currentBufferIndex == 0 ? bufferSize - 1 : currentBufferIndex - 1;
+                Arrays.fill(resultBuffer[previousIndex], 0);
+            }
+
+            final float[] current = resultBuffer[currentBufferIndex];
+            int newActiveNodesCount = 0;
+            for (int i = 0; i < activeNodesMask.length; i++) {
+                if(activeNodesMask[i]==0)
+                    current[i]=0;
+                else if(current[i]==0) {
+                    indexesArray[newActiveNodesCount++] = i;
+                }
+            }
+            // get the newly activated indexes.
+            int[] activeIndexes = Arrays.copyOf(indexesArray, newActiveNodesCount);
+
+            //System.out.println(newActiveNodesCount);
+            // flat array containing activations. Length = [nodeIndexes.length * bufferSize]
+            float[] activations = dnn.calculateForOutputs(handle, currentVectorIndex, activeIndexes);
+            for (int i = 0; i < bufferSize; i++) {
+                float[] scores = resultBuffer[(i + currentBufferIndex) % bufferSize];
+                int k = 0;
+                for (int j = 0; j < newActiveNodesCount; j++) {
+                    scores[activeIndexes[j]] = activations[k++];
+                }
+            }
+            currentBufferIndex = (currentBufferIndex + 1) % bufferSize;
+            currentVectorIndex++;
+
+            softMax(current);
+            return current;
+        }
+
+        private void softMax(float[] input) {
+            float total = 0;
+            for (int i = 0; i < input.length; i++) {
+                float v = input[i];
+                // most likely more than half of the values will be zero.
+                float d = v == 0 ? 1 : (float) Math.exp(v);
+                //float d = v == 0 ? 1 : expApproximation(v);
+                softMaxExponential[i] = d;
+                total += d;
+            }
+            for (int i = 0; i < input.length; i++) {
+                input[i] = softMaxExponential[i] / total;
+            }
+        }
+
+        private float expApproximation(float input) {
+            final long tmp = (long) (1512775 * input + 1072632447);
+            return (float) Double.longBitsToDouble(tmp << 32);
+        }
     }
+
+
+
 
     public Context getNewContext(int inputVectorCount, int batchSize) {
         long handle = getContext(inputVectorCount, batchSize);
-        return new Context(this, handle);
+        return new Context(this, handle, inputVectorCount, batchSize);
     }
 
     native long getContext(int inputVectorCount, int batchSize);
