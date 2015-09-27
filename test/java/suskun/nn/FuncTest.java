@@ -2,7 +2,6 @@ package suskun.nn;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -77,22 +76,6 @@ public class FuncTest {
         return result;
     }
 
-    static void lazyTest() throws IOException {
-        QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.tv.model"));
-        float[][] input = BatchData.loadRawBinary("a", new File("data/16khz.bin")).getAsFloatMatrix();
-        QuantizedDnn.LazyBatchContext context = dnn.getNewLazyBatchContext(input.length, 10);
-        context.calculateUntilOutput(input);
-
-        int[] outputIndexes = new int[50];
-        for (int i = 0; i < 50; i++) {
-            outputIndexes[i] = i * 2;
-        }
-        for (int i = 0; i < input.length; i++) {
-            float[] result = context.calculateForOutputNodes(i, outputIndexes);
-            System.out.println(Arrays.toString(result));
-        }
-    }
-
     static void lazyEmulation() throws IOException {
         QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.extended.tv.model"));
         float[][] input = BatchData.loadRawBinary("a", new File("data/16khz.bin")).getAsFloatMatrix();
@@ -111,29 +94,6 @@ public class FuncTest {
             total += result[0];
         }
         System.out.println("Lazy calculated in: " + (System.currentTimeMillis() - start));
-    }
-
-    static void lazyBatchEmulation() throws IOException {
-        QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.extended.tv.model"));
-        float[][] input = BatchData.loadRawBinary("a", new File("data/16khz.bin")).getAsFloatMatrix();
-        byte[][] masks = generateMasks(
-                input.length,
-                dnn.outputDimension,
-                (int) (dnn.outputDimension * 0.4),
-                (int) (dnn.outputDimension * 0.01));
-        QuantizedDnn.LazyBatchContext context = dnn.getNewLazyBatchContext(input.length, 4);
-        long start = System.currentTimeMillis();
-        context.calculateUntilOutput(input);
-        float total = 0;
-        for (int i = 0; i < input.length; i++) {
-            byte[] mask = masks[i];
-            //System.out.println(countOfOnes(mask));
-            float[] result = context.calculateForOutputNodes(mask);
-            total += result[0];
-            //System.out.println(Arrays.toString(result));
-        }
-        System.out.println("Lazy-Batch calculated in: " + (System.currentTimeMillis() - start));
-
     }
 
     static byte[][] generateMasks(int count, int dimension, int averageActiveNode, int averageNewActiveNode) {
@@ -185,8 +145,6 @@ public class FuncTest {
         //generateAlignedInput(100);
         runQuantized();
         //runNaive();
-        //lazyTest();
         lazyEmulation();
-        lazyBatchEmulation();
     }
 }
