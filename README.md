@@ -6,7 +6,9 @@ Implementation improves the speed of the DNN calculations on CPUs using SIMD ins
 Ideas are taken from Vanhoucke et-al's [Improving the speed of neural networks on CPUs] (http://static.googleusercontent.com/media/research.google.com/en//pubs/archive/37631.pdf) paper. Library contains the C++ implementation and a Java API. 
 
 ## Basic usage
-First a proper DNN model file needs to be created. System uses a text DNN file and converts it to a binary form. For now, it accepts [Kaldi] (http://kaldi.sourceforge.net/dnn.html) style network files. Also, neural network input and hidden layer node sizes needs to be aligned to 4 and 16 respectively.
+First a proper DNN model file needs to be created. System uses a text DNN file and converts it to a binary form. 
+For now, it accepts [Kaldi] (http://kaldi.sourceforge.net/dnn.html) style network files. Also, neural network input and hidden layer node sizes needs to be aligned to 4 and 16 respectively.
+C++ API is not yet well documented, so for now Java API is the suggested way to use the library.
 
 For converting network:
 
@@ -45,10 +47,10 @@ lazy calculation is not as effective as it should.
 
 ## How it works?
 
-The DNN's used in Automatic Speech Recognition (ASR) systems are usually very large. Especially server side applications uses networks 
-with more than 30 million parameters. In common ASR systems, for 1 seconds of speech, around 100 DNN activations needs to be
-calculated. This makes around 3 billion multiplication and sum operations for 1 seconds or data.  
-One idea is to use GPUs for this. Indeed they work and they are very fast. But they are not as ubiquitous as CPUs and there are (were) not so practical 
+The DNNs used in Automatic Speech Recognition (ASR) systems are usually very large. Especially server side applications use networks 
+ with sometimes more than 30 million parameters. In common ASR systems, for 1 seconds of speech, around 100 full network output activations needs to be
+calculated. This makes around 3 billion multiplication and sum operations for 1 seconds or data.   
+One idea is to use GPUs for this task. Indeed they work and they are very fast. But they are not as ubiquitous as CPUs and there are (were) not so practical 
 for real-time speech processing.
 So, for some applications those DNNs needs to run fast in CPUs. Conventional calculation techniques becomes too slow for practical use, as stated in the paper, processing 1 second of speech takes around 4 seconds using
 using naive floating point matrix multiplications. Using naive floating point SIMD instructions comes to mind, but that only 
@@ -60,13 +62,13 @@ Instead of using 32 bit floating numbers for weights and sigmoid activations, 8 
 between -2 and 2 (Actually a nice Gaussian curve with small variance), and sigmoid activation values are always between 0 and 1. 
 Then, using a special SIMD operation, 16 signed integers
 are multiplied with 16 unsigned integers and results are summed nicely with almost a single instruction. There are some exceptions and caveats but long story short, this reduces the time required for processing 1 second 
-of speech to around 0.25-0.3 seconds. Which is acceptable even for the runtime systems. 
+of speech to around 0.25-0.3 seconds. Which is acceptable even for the runtime systems. For details, please refer to the paper.
 
 ## Actual Speed
 In general, this network is about a magnitude of order faster than a naive C++/Java implementation. According to my tests, 
 it is more than 2 times faster than networks that uses BLAS (Via JBlas). When using Java API, it may take a small 
  hit because of the JNI.
-This library allows usage of very large DNNs (such as 4-5 2048 node hidden layers and 8000 output nodes). For small networks, speed difference may not be significant.
+This library allows usage of very large DNNs (such as 4-5 2048 node hidden layers and 8000 output nodes). But for small networks, speed difference may not be significant.
 
 ## Limitations
 * Only tested in Ubuntu Linux x86-64 (Event then, C++ side may need to be re-compiled). 
