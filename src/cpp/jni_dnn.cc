@@ -66,11 +66,45 @@ JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculateForOutputs(
   dnn::CalculationContext *context =
       reinterpret_cast<dnn::CalculationContext *>(handle);
   jsize outputNodeCount = env->GetArrayLength(outputNodeIndexes);
-  float *res = context->lazyOutputActivations(
+  float *res = context->lazyBatchOutputActivations(
       (int)inputIndex, env->GetIntArrayElements(outputNodeIndexes, 0),
       outputNodeCount);
   jsize len = outputNodeCount * context->batchSize;
   jfloatArray result = env->NewFloatArray(len);
   env->SetFloatArrayRegion(result, 0, len, res);
   return result;
+}
+
+JNIEXPORT jfloatArray JNICALL
+Java_suskun_nn_QuantizedDnn_calculateSoftMaxForOutputs(
+    JNIEnv *env, jobject obj, jlong handle, jint inputIndex,
+    jbyteArray outputMask) {
+  dnn::CalculationContext *context =
+      reinterpret_cast<dnn::CalculationContext *>(handle);
+
+  float *res = context->lazyOutputActivations(
+      (int)inputIndex, (char *)env->GetByteArrayElements(outputMask, 0));
+  jsize len = env->GetArrayLength(outputMask);
+  jfloatArray result = env->NewFloatArray(len);
+  env->SetFloatArrayRegion(result, 0, len, res);
+  return result;
+
+}
+
+
+JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_deleteLazyContext(
+    JNIEnv *env, jobject obj, jlong handle) {
+  dnn::CalculationContext *context =
+      reinterpret_cast<dnn::CalculationContext *>(handle);
+  delete context;
+}
+
+/*
+ * Class:     suskun_nn_QuantizedDnn
+ * Method:    deleteNativeDnn
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_deleteNativeDnn(
+    JNIEnv *env, jobject obj) {
+  delete quantizedDnn;
 }

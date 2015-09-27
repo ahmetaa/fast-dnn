@@ -49,6 +49,14 @@ public class FeedForwardNetwork {
         outputLayer.align(hiddenLayerAlignment, 1);
     }
 
+    public void extend(int hiddenLayerNodecount, int outputcount) {
+        firstLayer.extend(firstLayer.inputDimension, hiddenLayerNodecount);
+        for (int i = 1; i < layers.size() - 1; i++) {
+            layers.get(i).extend(hiddenLayerNodecount, hiddenLayerNodecount);
+        }
+        outputLayer.align(hiddenLayerNodecount, outputcount);
+    }
+
     public String info() {
         StringBuilder builder = new StringBuilder();
         int i = 0;
@@ -258,6 +266,33 @@ public class FeedForwardNetwork {
             this.inputDimension = weights[0].length;
             this.outputDimension = weights.length;
         }
+
+        void extend(int inputNodeCount, int outputNodeCount) {
+            // extend bias
+            bias = extend(this.bias, outputNodeCount);
+
+            float[][] newWeights = new float[outputNodeCount][];
+
+            for (int i = 0; i < outputDimension; i++) {
+                newWeights[i] = extend(weights[i], inputNodeCount);
+            }
+            for(int i = outputDimension; i<outputNodeCount; i++) {
+                newWeights[i] = newWeights[i%outputDimension].clone();
+            }
+            this.weights = newWeights;
+            this.inputDimension = weights[0].length;
+            this.outputDimension = weights.length;
+        }
+
+        // extends an array by copying input array circularly
+        static float[] extend(float[] input, int size) {
+            float[] result = new float[size];
+            for (int i = 0; i < result.length; i++) {
+                result[i] = input[i % input.length];
+            }
+            return result;
+        }
+
 
         public static Layer loadFromStream(DataInputStream dis) throws IOException {
             int inputDimension = dis.readInt();

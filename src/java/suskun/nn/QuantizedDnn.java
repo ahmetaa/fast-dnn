@@ -45,7 +45,35 @@ public class QuantizedDnn {
         return dnn;
     }
 
-    public static class Context {
+    public static class LazyContext {
+        final QuantizedDnn dnn;
+        long handle;
+        final int inputVectorCount;
+        int currentVectorIndex;
+
+        public LazyContext(QuantizedDnn dnn, long handle, int inputVectorCount) {
+            this.dnn = dnn;
+            this.handle = handle;
+            this.inputVectorCount = inputVectorCount;
+        }
+
+        public void calculateUntilOutput(float[][] input) {
+            dnn.calculateUntilOutput(handle, toVector(input));
+        }
+
+        public float[] calculateForOutputNodes(byte[] activeNodesMask) {
+            // flat array containing activations. Length = [nodeIndexes.length * bufferSize]
+            float[] result = dnn.calculateSoftMaxForOutputs(handle, currentVectorIndex, activeNodesMask);
+            currentVectorIndex++;
+            return result;
+        }
+
+        public void delete() {
+            dnn.deleteLazyContext(handle);
+        }
+    }
+
+    public static class LazyBatchContext {
         final QuantizedDnn dnn;
         long handle;
         final int inputVectorCount;
@@ -56,14 +84,14 @@ public class QuantizedDnn {
         float[] softMaxExponential;
         int[] indexesArray;
 
-        public Context(QuantizedDnn dnn, long handle, int inputVectorCount, int bufferSize) {
+        public LazyBatchContext(QuantizedDnn dnn, long handle, int inputVectorCount, int bufferSize) {
             this.dnn = dnn;
             this.handle = handle;
             this.inputVectorCount = inputVectorCount;
             this.bufferSize = bufferSize;
             this.resultBuffer = new float[bufferSize][dnn.outputDimension];
             this.softMaxExponential = new float[dnn.outputDimension];
-            this.indexesArray= new int[dnn.outputDimension];
+            this.indexesArray = new int[dnn.outputDimension];
         }
 
         public void calculateUntilOutput(float[][] input) {
@@ -72,17 +100,6 @@ public class QuantizedDnn {
 
         public float[] calculateForOutputNodes(int inputVectorIndex, int[] nodeIndexes) {
             return dnn.calculateForOutputs(handle, inputVectorIndex, nodeIndexes);
-        }
-
-        private int[] byteMaskToIndexes(byte[] mask, int activeNodeCount) {
-            int[] nodeIndexes = new int[activeNodeCount];
-            int i = 0, j = 0;
-            for (byte b : mask) {
-                if (b == 1)
-                    nodeIndexes[j++] = i;
-                i++;
-            }
-            return nodeIndexes;
         }
 
         public float[] calculateForOutputNodes(byte[] activeNodesMask) {
@@ -96,9 +113,9 @@ public class QuantizedDnn {
             final float[] current = resultBuffer[currentBufferIndex];
             int newActiveNodesCount = 0;
             for (int i = 0; i < activeNodesMask.length; i++) {
-                if(activeNodesMask[i]==0)
-                    current[i]=0;
-                else if(current[i]==0) {
+                if (activeNodesMask[i] == 0)
+                    current[i] = 0;
+                else if (current[i] == 0) {
                     indexesArray[newActiveNodesCount++] = i;
                 }
             }
@@ -106,13 +123,17 @@ public class QuantizedDnn {
             int[] activeIndexes = Arrays.copyOf(indexesArray, newActiveNodesCount);
 
             //System.out.println(newActiveNodesCount);
-            // flat array containing activations. Length = [nodeIndexes.length * bufferSize]
-            float[] activations = dnn.calculateForOutputs(handle, currentVectorIndex, activeIndexes);
-            for (int i = 0; i < bufferSize; i++) {
-                float[] scores = resultBuffer[(i + currentBufferIndex) % bufferSize];
-                int k = 0;
-                for (int j = 0; j < newActiveNodesCount; j++) {
-                    scores[activeIndexes[j]] = activations[k++];
+            if (newActiveNodesCount > 0) {
+                // flat array containing activations. Length = [nodeIndexes.length * bufferSize]
+                float[] activations = dnn.calculateForOutputs(handle, currentVectorIndex, activeIndexes);
+                for (int i = 0; i < bufferSize; i++) {
+                    float[] scores = resultBuffer[(i + currentBufferIndex) % bufferSize];
+                    int k = 0;
+                    for (int j = 0; j < newActiveNodesCount; j++) {
+                        float activation = activations[k];
+                        scores[activeIndexes[j]] = activation;
+                        k++;
+                    }
                 }
             }
             currentBufferIndex = (currentBufferIndex + 1) % bufferSize;
@@ -143,19 +164,27 @@ public class QuantizedDnn {
         }
     }
 
-
-
-
-    public Context getNewContext(int inputVectorCount, int batchSize) {
+    public LazyBatchContext getNewLazyBatchContext(int inputVectorCount, int batchSize) {
         long handle = getContext(inputVectorCount, batchSize);
-        return new Context(this, handle, inputVectorCount, batchSize);
+        return new LazyBatchContext(this, handle, inputVectorCount, batchSize);
     }
+
+    public LazyContext getNewLazyContext(int inputVectorCount) {
+        long handle = getContext(inputVectorCount,8);
+        return new LazyContext(this, handle, inputVectorCount);
+    }
+
+    native void deleteLazyContext(long handle);
+
+    public native void deleteNativeDnn();
 
     native long getContext(int inputVectorCount, int batchSize);
 
     native void calculateUntilOutput(long contextHandle, float[] input);
 
     native float[] calculateForOutputs(long contextHandle, int inputIndex, int[] outputIndexes);
+
+    native float[] calculateSoftMaxForOutputs(long contextHandle, int inputIndex, byte[] outputMask);
 
     native float[] calculate(float[] input, int inputVectorCount, int inputDimension, int batchSize);
 
@@ -164,11 +193,16 @@ public class QuantizedDnn {
     public native int outputDimension();
 
     public float[][] calculate(float[][] input) {
+        return calculate(input, 8);
+    }
+
+    public float[][] calculate(float[][] input, int batchSize) {
         int dimension = input[0].length;
         float[] flattened = toVector(input);
-        float[] res1d = calculate(flattened, input.length, dimension, 8);
+        float[] res1d = calculate(flattened, input.length, dimension, batchSize);
         return toMatrix(res1d, input.length, outputDimension);
     }
+
 
     private static float[] toVector(float[][] arr2d) {
         int vecCount = arr2d.length;

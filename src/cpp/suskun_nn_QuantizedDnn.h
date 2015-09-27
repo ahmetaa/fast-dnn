@@ -12,57 +12,80 @@ extern "C" {
  * Method:    initialize
  * Signature: (Ljava/lang/String;)V
  */
-JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_initialize(JNIEnv *, jobject,
-                                                              jstring);
+JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_initialize
+  (JNIEnv *, jobject, jstring);
+
+/*
+ * Class:     suskun_nn_QuantizedDnn
+ * Method:    deleteLazyContext
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_deleteLazyContext
+  (JNIEnv *, jobject, jlong);
+
+/*
+ * Class:     suskun_nn_QuantizedDnn
+ * Method:    deleteNativeDnn
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_deleteNativeDnn
+  (JNIEnv *, jobject);
 
 /*
  * Class:     suskun_nn_QuantizedDnn
  * Method:    getContext
  * Signature: (II)J
  */
-JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_getContext(JNIEnv *,
-                                                               jobject, jint,
-                                                               jint);
+JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_getContext
+  (JNIEnv *, jobject, jint, jint);
 
 /*
  * Class:     suskun_nn_QuantizedDnn
  * Method:    calculateUntilOutput
  * Signature: (J[F)V
  */
-JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_calculateUntilOutput(
-    JNIEnv *, jobject, jlong, jfloatArray);
+JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_calculateUntilOutput
+  (JNIEnv *, jobject, jlong, jfloatArray);
 
 /*
  * Class:     suskun_nn_QuantizedDnn
  * Method:    calculateForOutputs
  * Signature: (JI[I)[F
  */
-JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculateForOutputs(
-    JNIEnv *, jobject, jlong, jint, jintArray);
+JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculateForOutputs
+  (JNIEnv *, jobject, jlong, jint, jintArray);
+
+/*
+ * Class:     suskun_nn_QuantizedDnn
+ * Method:    calculateSoftMaxForOutputs
+ * Signature: (JI[B)[F
+ */
+JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculateSoftMaxForOutputs
+  (JNIEnv *, jobject, jlong, jint, jbyteArray);
 
 /*
  * Class:     suskun_nn_QuantizedDnn
  * Method:    calculate
  * Signature: ([FIII)[F
  */
-JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculate(
-    JNIEnv *, jobject, jfloatArray, jint, jint, jint);
+JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculate
+  (JNIEnv *, jobject, jfloatArray, jint, jint, jint);
 
 /*
  * Class:     suskun_nn_QuantizedDnn
  * Method:    inputDimension
  * Signature: ()I
  */
-JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_inputDimension(JNIEnv *,
-                                                                  jobject);
+JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_inputDimension
+  (JNIEnv *, jobject);
 
 /*
  * Class:     suskun_nn_QuantizedDnn
  * Method:    outputDimension
  * Signature: ()I
  */
-JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_outputDimension(JNIEnv *,
-                                                                   jobject);
+JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_outputDimension
+  (JNIEnv *, jobject);
 
 #ifdef __cplusplus
 }

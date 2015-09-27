@@ -46,27 +46,9 @@ const float WEIGHT_MULTIPLIER = 127;
 
 const float MAX_WEIGHT_THRESHOLD = 5;
 
-inline void *aligned_malloc(size_t align, size_t size) {
-  void *result;
-#ifdef _MSC_VER
-  result = _aligned_malloc(size, align);
-#else
-  if (posix_memalign(&result, align, size)) result = 0;
-#endif
-  return result;
-}
-
-inline void aligned_free(void *ptr) {
-#ifdef _MSC_VER
-  _aligned_free(ptr);
-#else
-  free(ptr);
-#endif
-}
-
 QuantizedSigmoid::QuantizedSigmoid() {
   int size = 1088;  // table lookup size 1088=64*17 is arbitrary but can be
-                    // divided to 64
+  // divided to 64
   this->lookup = new unsigned char[1088];
 
   // when a sigmoid is quantized with 255, numbers below around -5.4 becomes 0,
@@ -209,6 +191,8 @@ CalculationContext::CalculationContext(QuantizedDnn *dnn, int inputCount,
   // allocate for quantized unsigned char input values.
   this->quantizedActivations =
       (unsigned char *)dnn::byte_alloc(this->hiddenNodeCount * inputCount);
+
+  this->softmax = new SoftMax(dnn->outputDimension());
 }
 
 void CalculationContext::inputActivations(BatchData *inputData,
@@ -319,7 +303,8 @@ static float inline quantizedNodeSum(int vectorSize,
   // loop for input_dimension/16 times. (Because we quantized to 1 byte)
   for (int j = 0; j < vectorSize; ++j) {
     // load quantized unsigned char input values.
-    const __m128i inputVec = _mm_load_si128((__m128i *)&quantizedInput[j * 16]);
+    const __m128i
+        inputVec = _mm_load_si128((__m128i *)&quantizedInput[j * 16]);
     // c = saturate(i[0]*w[0]+i[1]*w[1]), saturate(i[2]*w[2]+i[3]*w[3]),...,
     // saturate(i[14]*w[14]+i[15]*w[15])
     // c contains eight 16 bit value.
@@ -334,6 +319,50 @@ static float inline quantizedNodeSum(int vectorSize,
   return dnn::__horizontalSumInt32(sum);
 }
 
+/* Calculates activations for a set of output nodes against a single
+* input vector.
+* Output node set is usually a small amount for speech recognition
+* applications.
+*/
+float *CalculationContext::lazyOutputActivations(int batchStartIndex,
+                                                 char *outputNodes) {
+  // we do this only for output.
+  QuantizedSimdLayer *layer = this->dnn->outputLayer;
+  //
+  const int vectorSize = layer->inputDim / 16;
+
+  const float dequantizationCoefficient =
+      layer->multiplier * dnn::SIGMOID_QUANTIZATION_MULTIPLIER;
+
+  float *result = new float[layer->nodeCount];
+
+  // for each node
+  for (size_t i = 0; i < layer->nodeCount; ++i) {
+    // skip if no calculation is needed for the output.
+    if (outputNodes[i] == 0) {
+      result[i] = 0;
+      continue;
+    }
+
+    __m128i *w = &layer->weights[i * vectorSize];
+
+    // input batch start.
+    unsigned char *input =
+        &this->quantizedActivations[batchStartIndex * layer->inputDim];
+
+    if (batchStartIndex >= this->inputCount) break;
+
+    float sum = dnn::quantizedNodeSum(vectorSize, input, w);
+
+    // we set the result after dequantization and adding bias.
+    result[i] = sum / dequantizationCoefficient + layer->bias[i];
+  }
+
+  this->softmax->apply(result);
+
+  return result;
+}
+
 /* Calculates activations for a set of output nodes against batch size of
  * inputs.
  * Result is a one dimensional array that carries the [output_node_size *
@@ -341,9 +370,9 @@ static float inline quantizedNodeSum(int vectorSize,
  * output node set is usually a small amount for speech recognition
  * applications.
  */
-float *CalculationContext::lazyOutputActivations(int batchStartIndex,
-                                                 int *outputNodes,
-                                                 int outputCount) {
+float *CalculationContext::lazyBatchOutputActivations(int batchStartIndex,
+                                                      int *outputNodes,
+                                                      int outputCount) {
   // we do this only for output.
   QuantizedSimdLayer *layer = this->dnn->outputLayer;
   //
@@ -353,7 +382,6 @@ float *CalculationContext::lazyOutputActivations(int batchStartIndex,
       layer->multiplier * dnn::SIGMOID_QUANTIZATION_MULTIPLIER;
   float *result = new float[outputCount * this->batchSize];
 
-  int outputNodeCounter = 0;
   // for each node
   for (size_t i = 0; i < outputCount; ++i) {
     // get weights of the current output.
@@ -373,12 +401,12 @@ float *CalculationContext::lazyOutputActivations(int batchStartIndex,
       // we set the result for current output
       // [s[0:0],s[1:0],...,s[0,1],s[1:1],...,s[0,batchSize],s[1:batchSize]]
       // for s[node:input]
-      result[outputCount * k + i] = sum / dequantizationCoefficient;
+      result[outputCount * k + i] = (sum / dequantizationCoefficient)
+          + layer->bias[outputIndex];
 
       // next input.
       input += layer->inputDim;
     }
-    outputNodeCounter++;
   }
 
   return result;

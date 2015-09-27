@@ -19,6 +19,25 @@ using namespace std;
 
 namespace dnn {
 
+
+inline void *aligned_malloc(size_t align, size_t size) {
+  void *result;
+#ifdef _MSC_VER
+  result = _aligned_malloc(size, align);
+#else
+  if (posix_memalign(&result, align, size)) result = 0;
+#endif
+  return result;
+}
+
+inline void aligned_free(void *ptr) {
+#ifdef _MSC_VER
+  _aligned_free(ptr);
+#else
+  free(ptr);
+#endif
+}
+
 static const float SIGMOID_QUANTIZATION_MULTIPLIER = 200.0f;
 
 static const unsigned char SIGMOID_QUANTIZATION_MULTIPLIER_UCHAR = 200;
@@ -69,6 +88,11 @@ class FloatSimdLayer {
   FloatSimdLayer(FloatLayer *floatLayer);
 
   void validate();
+
+  ~FloatSimdLayer() {
+    aligned_free(weights);
+    delete bias;
+  }
 };
 
 // Layer for Quantized DNN
@@ -84,6 +108,12 @@ class QuantizedSimdLayer {
   QuantizedSimdLayer(){};
 
   QuantizedSimdLayer(const FloatLayer &floatLayer);
+
+  ~QuantizedSimdLayer() {
+    aligned_free(weights);
+    delete bias;
+  }
+
 };
 
 // DNN with quantized SIMD layers. Only the input layer is not quantized.
@@ -101,13 +131,18 @@ class QuantizedDnn {
 
   int inputDimension() { return inputLayer->inputDimension; }
 
-  ~QuantizedDnn() {
-    // delete layers;
-  }
-
   int layerCount() { return (int)layers.size(); }
 
   void applyShiftAndScale(BatchData *input);
+
+  ~QuantizedDnn() {
+    delete inputLayer;
+    for (QuantizedSimdLayer *layer : layers) {
+      delete layer;
+    }
+    aligned_free(shift);
+    aligned_free(scale);
+  }
 };
 
 class CalculationContext {
@@ -133,6 +168,8 @@ class CalculationContext {
   // this is actually a flattened two dimensional array.
   float *activations;
 
+  SoftMax *softmax;
+
   CalculationContext(QuantizedDnn *dnn, int inputCount, int batchSize);
 
   void lastHiddenLayerActivations(BatchData *input);
@@ -154,8 +191,16 @@ class CalculationContext {
 
   float *calculate(BatchData *input);
 
-  float *lazyOutputActivations(int batchStartIndex, int *outputNodes,
-                               int outputCount);
+  float *lazyBatchOutputActivations(int batchStartIndex, int *outputNodes,
+                                    int outputCount);
+
+  float *lazyOutputActivations(int batchStartIndex, char *outputNodes);
+
+  ~CalculationContext() {
+    delete quantizedActivations;
+    delete activations;
+    delete softmax;
+  }
 };
 }
 #endif  // DNN_DNN_H
