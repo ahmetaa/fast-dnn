@@ -1,8 +1,8 @@
 LIBRARY := libfast-dnn.so
-JAVA_HOME := /usr/lib/jvm/java-8-oracle
-PROJECT_HOME := /home/afsina/projects/fast-dnn
+PROJECT_HOME := ../..
 OBJFILES := dnn.o jni_dnn.o float_dnn.o
-INCLUDES := -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux
+JNI_HEADERS :=../../include/
+INCLUDES := -I$(JNI_HEADERS)
 CXXFLAGS := $(INCLUDES) -g -O2 -march=native -mtune=native -std=c++11 -funroll-loops -msse4 -fPIC
 
 $(LIBRARY): $(OBJFILES)
