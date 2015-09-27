@@ -43,14 +43,14 @@ can be made lazily. However, user of the API must provide an output-length byte 
     }
 
 If amount of outputs for each input is below %50 of the total outputs, lazy calculation may give around 10% speed increase. However, because of the JNI round trips,
-lazy calculation is not as effective as it should.  
+lazy calculation is not as effective as it should be.  
 
 ## How it works?
 
 The DNNs used in Automatic Speech Recognition (ASR) systems are usually very large. Especially server side applications use networks 
  with sometimes more than 30 million parameters. In common ASR systems, for 1 seconds of speech, around 100 full network output activations needs to be
 calculated. This makes around 3 billion multiplication and sum operations for 1 seconds or data.   
-One idea is to use GPUs for this task. Indeed they work and they are very fast. But they are not as ubiquitous as CPUs and there are (were) not so practical 
+One idea is to use GPUs for this task. Indeed they work and they are very fast. But they are not as ubiquitous as CPUs and they are (were) not so practical 
 for real-time speech processing.
 So, for some applications those DNNs needs to run fast in CPUs. Conventional calculation techniques becomes too slow for practical use, as stated in the paper, processing 1 second of speech takes around 4 seconds using
 using naive floating point matrix multiplications. Using naive floating point SIMD instructions comes to mind, but that only 
