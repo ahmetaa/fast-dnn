@@ -49,18 +49,10 @@ JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_calculateUntilOutput
 
 /*
  * Class:     suskun_nn_QuantizedDnn
- * Method:    calculateForOutputs
- * Signature: (JI[I)[F
- */
-JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculateForOutputs
-  (JNIEnv *, jobject, jlong, jint, jintArray);
-
-/*
- * Class:     suskun_nn_QuantizedDnn
- * Method:    calculateSoftMaxForOutputs
+ * Method:    calculateLazy
  * Signature: (JI[B)[F
  */
-JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculateSoftMaxForOutputs
+JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculateLazy
   (JNIEnv *, jobject, jlong, jint, jbyteArray);
 
 /*

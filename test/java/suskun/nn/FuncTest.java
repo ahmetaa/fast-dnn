@@ -82,16 +82,15 @@ public class FuncTest {
         byte[][] masks = generateMasks(
                 input.length,
                 dnn.outputDimension,
-                (int) (dnn.outputDimension * 0.45),
+                (int) (dnn.outputDimension * 0.40),
                 (int) (dnn.outputDimension * 0.02));
         QuantizedDnn.LazyContext context = dnn.getNewLazyContext(input.length);
         long start = System.currentTimeMillis();
         context.calculateUntilOutput(input);
-        float total = 0;
+
         for (int i = 0; i < input.length; i++) {
             byte[] mask = masks[i];
-            float[] result = context.calculateForOutputNodes(mask);
-            total += result[0];
+            context.calculateForOutputNodes(mask);
         }
         System.out.println("Lazy calculated in: " + (System.currentTimeMillis() - start));
     }
@@ -142,7 +141,7 @@ public class FuncTest {
     public static void main(String[] args) throws IOException {
         //generateNN();
         //extendNetwork(new File("data/dnn.tv.model"), new File("data/dnn.extended.tv.model"));
-        //generateAlignedInput(100);
+        generateAlignedInput(100);
         runQuantized();
         //runNaive();
         lazyEmulation();

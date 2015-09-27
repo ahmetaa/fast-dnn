@@ -62,7 +62,7 @@ public class QuantizedDnn {
 
         public float[] calculateForOutputNodes(byte[] activeNodesMask) {
             // flat array containing activations. Length = [nodeIndexes.length * bufferSize]
-            float[] result = dnn.calculateSoftMaxForOutputs(handle, currentVectorIndex, activeNodesMask);
+            float[] result = dnn.calculateLazy(handle, currentVectorIndex, activeNodesMask);
             currentVectorIndex++;
             return result;
         }
@@ -73,7 +73,7 @@ public class QuantizedDnn {
     }
 
     public LazyContext getNewLazyContext(int inputVectorCount) {
-        long handle = getContext(inputVectorCount,8);
+        long handle = getContext(inputVectorCount, 8);
         return new LazyContext(this, handle, inputVectorCount);
     }
 
@@ -85,9 +85,7 @@ public class QuantizedDnn {
 
     native void calculateUntilOutput(long contextHandle, float[] input);
 
-    native float[] calculateForOutputs(long contextHandle, int inputIndex, int[] outputIndexes);
-
-    native float[] calculateSoftMaxForOutputs(long contextHandle, int inputIndex, byte[] outputMask);
+    native float[] calculateLazy(long contextHandle, int inputIndex, byte[] outputMask);
 
     native float[] calculate(float[] input, int inputVectorCount, int inputDimension, int batchSize);
 

@@ -60,23 +60,8 @@ JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_calculateUntilOutput(
   context->lastHiddenLayerActivations(&batchData);
 }
 
-JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculateForOutputs(
-    JNIEnv *env, jobject obj, jlong handle, jint inputIndex,
-    jintArray outputNodeIndexes) {
-  dnn::CalculationContext *context =
-      reinterpret_cast<dnn::CalculationContext *>(handle);
-  jsize outputNodeCount = env->GetArrayLength(outputNodeIndexes);
-  float *res = context->lazyBatchOutputActivations(
-      (int)inputIndex, env->GetIntArrayElements(outputNodeIndexes, 0),
-      outputNodeCount);
-  jsize len = outputNodeCount * context->batchSize;
-  jfloatArray result = env->NewFloatArray(len);
-  env->SetFloatArrayRegion(result, 0, len, res);
-  return result;
-}
-
 JNIEXPORT jfloatArray JNICALL
-Java_suskun_nn_QuantizedDnn_calculateSoftMaxForOutputs(
+Java_suskun_nn_QuantizedDnn_calculateLazy(
     JNIEnv *env, jobject obj, jlong handle, jint inputIndex,
     jbyteArray outputMask) {
   dnn::CalculationContext *context =

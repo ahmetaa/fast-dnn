@@ -168,7 +168,10 @@ class CalculationContext {
   // this is actually a flattened two dimensional array.
   float *activations;
 
-  SoftMax *softmax;
+  float *singleOutput;
+
+  SoftMax *softMax;
+
 
   CalculationContext(QuantizedDnn *dnn, int inputCount, int batchSize);
 
@@ -191,15 +194,13 @@ class CalculationContext {
 
   float *calculate(BatchData *input);
 
-  float *lazyBatchOutputActivations(int batchStartIndex, int *outputNodes,
-                                    int outputCount);
-
-  float *lazyOutputActivations(int batchStartIndex, char *outputNodes);
+  float *lazyOutputActivations(int inputIndex, char *outputNodes);
 
   ~CalculationContext() {
     delete quantizedActivations;
     delete activations;
-    delete softmax;
+    delete softMax;
+    delete singleOutput;
   }
 };
 }

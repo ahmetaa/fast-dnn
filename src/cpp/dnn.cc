@@ -192,7 +192,10 @@ CalculationContext::CalculationContext(QuantizedDnn *dnn, int inputCount,
   this->quantizedActivations =
       (unsigned char *)dnn::byte_alloc(this->hiddenNodeCount * inputCount);
 
-  this->softmax = new SoftMax(dnn->outputDimension());
+  this->softMax = new SoftMax(dnn->outputDimension());
+
+  this->singleOutput = dnn::float_alloc(dnn->outputDimension());
+
 }
 
 void CalculationContext::inputActivations(BatchData *inputData,
@@ -324,18 +327,17 @@ static float inline quantizedNodeSum(int vectorSize,
 * Output node set is usually a small amount for speech recognition
 * applications.
 */
-float *CalculationContext::lazyOutputActivations(int batchStartIndex,
+float *CalculationContext::lazyOutputActivations(int inputIndex,
                                                  char *outputNodes) {
   // we do this only for output.
   QuantizedSimdLayer *layer = this->dnn->outputLayer;
-  //
+
   const int vectorSize = layer->inputDim / 16;
 
   const float dequantizationCoefficient =
       layer->multiplier * dnn::SIGMOID_QUANTIZATION_MULTIPLIER;
 
-  float *result = new float[layer->nodeCount];
-
+  float *result = this->singleOutput;
   // for each node
   for (size_t i = 0; i < layer->nodeCount; ++i) {
     // skip if no calculation is needed for the output.
@@ -348,9 +350,9 @@ float *CalculationContext::lazyOutputActivations(int batchStartIndex,
 
     // input batch start.
     unsigned char *input =
-        &this->quantizedActivations[batchStartIndex * layer->inputDim];
+        &this->quantizedActivations[inputIndex * layer->inputDim];
 
-    if (batchStartIndex >= this->inputCount) break;
+    if (inputIndex >= this->inputCount) break;
 
     float sum = dnn::quantizedNodeSum(vectorSize, input, w);
 
@@ -358,56 +360,7 @@ float *CalculationContext::lazyOutputActivations(int batchStartIndex,
     result[i] = sum / dequantizationCoefficient + layer->bias[i];
   }
 
-  this->softmax->apply(result);
-
-  return result;
-}
-
-/* Calculates activations for a set of output nodes against batch size of
- * inputs.
- * Result is a one dimensional array that carries the [output_node_size *
- * batch_size]
- * output node set is usually a small amount for speech recognition
- * applications.
- */
-float *CalculationContext::lazyBatchOutputActivations(int batchStartIndex,
-                                                      int *outputNodes,
-                                                      int outputCount) {
-  // we do this only for output.
-  QuantizedSimdLayer *layer = this->dnn->outputLayer;
-  //
-  const int vectorSize = layer->inputDim / 16;
-
-  const float dequantizationCoefficient =
-      layer->multiplier * dnn::SIGMOID_QUANTIZATION_MULTIPLIER;
-  float *result = new float[outputCount * this->batchSize];
-
-  // for each node
-  for (size_t i = 0; i < outputCount; ++i) {
-    // get weights of the current output.
-    int outputIndex = outputNodes[i];
-    __m128i *w = &layer->weights[outputIndex * vectorSize];
-
-    // input batch start.
-    unsigned char *input =
-        &this->quantizedActivations[batchStartIndex * layer->inputDim];
-
-    // for inputs in the batch.
-    for (int k = 0; k < this->batchSize; k++) {
-      if (k + batchStartIndex >= this->inputCount) break;
-
-      float sum = dnn::quantizedNodeSum(vectorSize, input, w);
-
-      // we set the result for current output
-      // [s[0:0],s[1:0],...,s[0,1],s[1:1],...,s[0,batchSize],s[1:batchSize]]
-      // for s[node:input]
-      result[outputCount * k + i] = (sum / dequantizationCoefficient)
-          + layer->bias[outputIndex];
-
-      // next input.
-      input += layer->inputDim;
-    }
-  }
+  this->softMax->apply(result);
 
   return result;
 }
@@ -452,7 +405,7 @@ BatchData *CalculationContext::calculateOutput() {
     quantizedLayerActivations(this->dnn->outputLayer, i, &outputs[i * outSize]);
   }
 
-  // add bias values and calculate softmax for the output vectors.
+  // add bias values and calculate softMax for the output vectors.
   const float *biasArr = this->dnn->outputLayer->bias;
 
   // add bias and apply soft max.
