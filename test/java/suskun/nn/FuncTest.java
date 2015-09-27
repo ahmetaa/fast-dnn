@@ -2,6 +2,7 @@ package suskun.nn;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -90,7 +91,8 @@ public class FuncTest {
 
         for (int i = 0; i < input.length; i++) {
             byte[] mask = masks[i];
-            context.calculateForOutputNodes(mask);
+            float[] result = context.calculateForOutputNodes(mask);
+            //System.out.println(Arrays.toString(Arrays.copyOf(result,30)));
         }
         System.out.println("Lazy calculated in: " + (System.currentTimeMillis() - start));
     }
