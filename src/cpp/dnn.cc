@@ -14,9 +14,9 @@
 using namespace std;
 
 int main() {
-  std::string fName = "/home/afsina/projects/fast-dnn/data/dnn.tv.model";
+  std::string fName = "/home/ahmetaa/projects/fast-dnn/data/dnn.tv.model";
   const dnn::FloatDnn floatDnn(fName);
-  std::string featureName = "/home/afsina/projects/fast-dnn/data/16khz.bin";
+  std::string featureName = "/home/ahmetaa/projects/fast-dnn/data/16khz.bin";
   dnn::BatchData batchData(featureName);
 
   dnn::QuantizedDnn qDnn(floatDnn);
@@ -44,7 +44,7 @@ static float inline quantizedNodeSum(int vectorSize,
 
 const float WEIGHT_MULTIPLIER = 127;
 
-const float MAX_WEIGHT_THRESHOLD = 5;
+const float MAX_WEIGHT_THRESHOLD = 3;
 
 QuantizedSigmoid::QuantizedSigmoid() {
   int size = 1088;  // table lookup size 1088=64*17 is arbitrary but can be
@@ -62,11 +62,16 @@ QuantizedSigmoid::QuantizedSigmoid() {
   }
 }
 
-__m128 *SIMD_alloc(int simdBlockCount) {
+inline unsigned char sigmoid(float i) {
+  float k = 1.0f / (1.0f + expf(-i));
+  return (unsigned char)(roundf(k*SIGMOID_QUANTIZATION_MULTIPLIER));
+}
+
+inline __m128 *SIMD_alloc(int simdBlockCount) {
   return (__m128 *)aligned_malloc(16, sizeof(__m128) * simdBlockCount);
 }
 
-__m128i *SIMD_i_alloc(int simdBlockCount) {
+inline __m128i *SIMD_i_alloc(int simdBlockCount) {
   return (__m128i *)aligned_malloc(16, sizeof(__m128i) * simdBlockCount);
 }
 
@@ -147,11 +152,8 @@ void CalculationContext::test(BatchData *input) {
 }
 
 float *CalculationContext::calculate(BatchData *input) {
-  // cout << "Hidden Layers " << endl;
   this->lastHiddenLayerActivations(input);
-  // cout << "Output Layer " << endl;
   BatchData *output = calculateOutput();
-  // cout << "Output Calculated " << endl;
   return output->data;
 }
 
@@ -257,8 +259,8 @@ void CalculationContext::quantizedSigmoid(int batchIndex) {
     if (k + batchIndex >= this->inputCount) break;
     // calculate quantized sigmoid. And write the result
     for (int i = 0; i < this->hiddenNodeCount; ++i) {
-      // for inputs in the batch.
-      qStart[i] = dnn::qSigmoid->get(currentActivations[i]);
+      //qStart[i] = dnn::qSigmoid->get(currentActivations[i]);
+      qStart[i] = dnn::sigmoid(currentActivations[i]);
     }
     // advance the float and quantized activations.
     qStart += hiddenNodeCount;
@@ -467,7 +469,7 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer) {
   }
 
   // find linear quantization multiplier
-  this->multiplier = dnn::WEIGHT_MULTIPLIER / max;
+  this->multiplier = roundf(dnn::WEIGHT_MULTIPLIER / max);
 
   const int inputSimdVectorSize = floatLayer.inputDim / 16;
 
@@ -491,7 +493,7 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer) {
       if (minWeight > maxWeight) {
         f = maxWeight;
       }
-      quantizedWeights[k] = static_cast<char>(f * multiplier);
+      quantizedWeights[k] = static_cast<char>(roundf(f * multiplier));
     }
 
     // transfer char values and load to SIMD.

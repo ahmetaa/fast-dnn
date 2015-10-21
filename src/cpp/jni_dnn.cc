@@ -13,7 +13,6 @@ JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_initialize(JNIEnv *env,
   const dnn::FloatDnn floatDnn(modelPath);
   quantizedDnn = new dnn::QuantizedDnn(floatDnn);
   env->ReleaseStringUTFChars(str, chars);
-  // TODO: float DNN must be freed.
 }
 
 JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_inputDimension(JNIEnv *env,
@@ -76,7 +75,6 @@ Java_suskun_nn_QuantizedDnn_calculateLazy(
 
 }
 
-
 JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_deleteLazyContext(
     JNIEnv *env, jobject obj, jlong handle) {
   dnn::CalculationContext *context =
@@ -89,7 +87,7 @@ JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_deleteLazyContext(
  * Method:    deleteNativeDnn
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_deleteNativeDnn(
+JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_delete(
     JNIEnv *env, jobject obj) {
   delete quantizedDnn;
 }

@@ -25,10 +25,10 @@ JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_deleteLazyContext
 
 /*
  * Class:     suskun_nn_QuantizedDnn
- * Method:    deleteNativeDnn
+ * Method:    delete
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_deleteNativeDnn
+JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_delete
   (JNIEnv *, jobject);
 
 /*

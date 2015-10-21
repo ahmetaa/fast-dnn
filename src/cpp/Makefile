@@ -6,5 +6,5 @@ INCLUDES := -I$(JNI_HEADERS)
 CXXFLAGS := $(INCLUDES) -g -O2 -march=native -mtune=native -std=c++11 -funroll-loops -msse4 -fPIC
 
 $(LIBRARY): $(OBJFILES)
-	$(CXX) -shared -o $@ $^
+	$(CXX) -shared -static-libstdc++ -o $@ $^
 	cp $@ $(PROJECT_HOME)/src/java/resources

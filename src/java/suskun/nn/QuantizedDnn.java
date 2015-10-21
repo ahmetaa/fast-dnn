@@ -50,7 +50,7 @@ public class QuantizedDnn {
         final int inputVectorCount;
         int currentVectorIndex;
 
-        public LazyContext(QuantizedDnn dnn, long handle, int inputVectorCount) {
+        private LazyContext(QuantizedDnn dnn, long handle, int inputVectorCount) {
             this.dnn = dnn;
             this.handle = handle;
             this.inputVectorCount = inputVectorCount;
@@ -79,7 +79,7 @@ public class QuantizedDnn {
 
     native void deleteLazyContext(long handle);
 
-    public native void deleteNativeDnn();
+    public native void delete();
 
     native long getContext(int inputVectorCount, int batchSize);
 

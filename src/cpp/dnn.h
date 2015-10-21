@@ -38,9 +38,9 @@ inline void aligned_free(void *ptr) {
 #endif
 }
 
-static const float SIGMOID_QUANTIZATION_MULTIPLIER = 200.0f;
+static const float SIGMOID_QUANTIZATION_MULTIPLIER = 255.0f;
 
-static const unsigned char SIGMOID_QUANTIZATION_MULTIPLIER_UCHAR = 200;
+static const unsigned char SIGMOID_QUANTIZATION_MULTIPLIER_UCHAR = 255;
 
 static const int SIGMOID_HALF_LOOKUP_SIZE = 544;
 
