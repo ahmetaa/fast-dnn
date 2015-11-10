@@ -47,9 +47,8 @@ const float WEIGHT_MULTIPLIER = 127;
 const float MAX_WEIGHT_THRESHOLD = 3;
 
 QuantizedSigmoid::QuantizedSigmoid() {
-  int size = 1088;  // table lookup size 1088=64*17 is arbitrary but can be
-  // divided to 64
-  this->lookup = new unsigned char[1088];
+  int size = SIGMOID_LOOKUP_SIZE;
+  this->lookup = new unsigned char[SIGMOID_LOOKUP_SIZE];
 
   // when a sigmoid is quantized with 255, numbers below around -5.4 becomes 0,
   // numbers over around +5.4 becomes 254
@@ -57,7 +56,7 @@ QuantizedSigmoid::QuantizedSigmoid() {
     float k = i / 100.0f;
     float sigmoid = 1.0f / (1 + expf(-k));
     unsigned char q =
-        (unsigned char)(sigmoid * dnn::SIGMOID_QUANTIZATION_MULTIPLIER);
+        (unsigned char) roundf(sigmoid * dnn::SIGMOID_QUANTIZATION_MULTIPLIER);
     lookup[i + size / 2] = q;
   }
 }
@@ -259,8 +258,8 @@ void CalculationContext::quantizedSigmoid(int batchIndex) {
     if (k + batchIndex >= this->inputCount) break;
     // calculate quantized sigmoid. And write the result
     for (int i = 0; i < this->hiddenNodeCount; ++i) {
-      //qStart[i] = dnn::qSigmoid->get(currentActivations[i]);
-      qStart[i] = dnn::sigmoid(currentActivations[i]);
+      qStart[i] = dnn::qSigmoid->get(currentActivations[i]);
+      //qStart[i] = dnn::sigmoid(currentActivations[i]);
     }
     // advance the float and quantized activations.
     qStart += hiddenNodeCount;

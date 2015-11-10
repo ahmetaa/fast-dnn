@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <assert.h>
+#include <math.h>
 #include "float_dnn.h"
 
 #ifndef DNN_DNN_H
@@ -18,7 +19,6 @@
 using namespace std;
 
 namespace dnn {
-
 
 inline void *aligned_malloc(size_t align, size_t size) {
   void *result;
@@ -39,10 +39,10 @@ inline void aligned_free(void *ptr) {
 }
 
 static const float SIGMOID_QUANTIZATION_MULTIPLIER = 255.0f;
-
 static const unsigned char SIGMOID_QUANTIZATION_MULTIPLIER_UCHAR = 255;
 
-static const int SIGMOID_HALF_LOOKUP_SIZE = 544;
+static const int SIGMOID_LOOKUP_SIZE = 1280; // arbitrary 64*28
+static const int SIGMOID_HALF_LOOKUP_SIZE = SIGMOID_LOOKUP_SIZE/2;
 
 class QuantizedSigmoid {
  public:
@@ -51,7 +51,7 @@ class QuantizedSigmoid {
   QuantizedSigmoid();
 
   inline unsigned char get(float input) {
-    int k = (int)(input * 100);
+    int k = (int) roundf(input * 100);
     if (k <= -SIGMOID_HALF_LOOKUP_SIZE) return 0;
     if (k >= SIGMOID_HALF_LOOKUP_SIZE)
       return dnn::SIGMOID_QUANTIZATION_MULTIPLIER_UCHAR;
