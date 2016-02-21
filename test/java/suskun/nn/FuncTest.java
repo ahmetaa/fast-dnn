@@ -2,9 +2,10 @@ package suskun.nn;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.*;
 
 public class FuncTest {
     public static void generateNN() throws IOException {
@@ -27,13 +28,13 @@ public class FuncTest {
     }
 
 
-    public static void generateAlignedInput(int vectorCount) throws IOException {
+    public static void generateAlignedInput(int vectorCount, File outFile) throws IOException {
         BatchData data = BatchData.loadFromText(new File("data/16khz"));
         System.out.println("Input Vector Count   = " + data.vectorCount());
         System.out.println("Input Data Dimension = " + data.get(0).size());
         data.alignDimension(4);
         System.out.println("Aligned Input Data Dimension = " + data.get(0).size());
-        data.serializeDataMatrix(new File("data/16khz.bin"), vectorCount);
+        data.serializeDataMatrix(outFile, vectorCount);
     }
 
     public static float[][] runQuantized() throws IOException {
@@ -42,7 +43,7 @@ public class FuncTest {
         QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.extended.tv.model"));
         float[][] input = BatchData.loadRawBinary("a", new File("data/16khz.bin")).getAsFloatMatrix();
         float[][] nativeResult = null;
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < 5; i++) {
             long start = System.currentTimeMillis();
             nativeResult = dnn.calculate(input, 10);
             System.out.println(i + " Native calculated in: " + (System.currentTimeMillis() - start));
@@ -84,9 +85,9 @@ public class FuncTest {
                 input.length,
                 dnn.outputDimension,
                 (int) (dnn.outputDimension * 0.40),
-                (int) (dnn.outputDimension * 0.02));
-        QuantizedDnn.LazyContext context = dnn.getNewLazyContext(input.length);
+                (int) (dnn.outputDimension * 0.03));
         long start = System.currentTimeMillis();
+        QuantizedDnn.LazyContext context = dnn.getNewLazyContext(input.length);
         context.calculateUntilOutput(input);
 
         for (int i = 0; i < input.length; i++) {
@@ -94,6 +95,8 @@ public class FuncTest {
             float[] result = context.calculateForOutputNodes(mask);
             //System.out.println(Arrays.toString(Arrays.copyOf(result,30)));
         }
+        context.delete();
+        dnn.delete();
         System.out.println("Lazy calculated in: " + (System.currentTimeMillis() - start));
     }
 
@@ -140,12 +143,64 @@ public class FuncTest {
         return sb.toString();
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void multiThreadedStressTest(int threadCount, int taskCount) throws InterruptedException, ExecutionException {
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CompletionService<TaskResult> cs = new ExecutorCompletionService<>(executor);
+        QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.extended.tv.model"));
+        for (int i = 0; i < taskCount; i++) {
+            cs.submit(new ServiceTask(dnn, new File("data/16khz-10s.bin").toPath()));
+        }
+        executor.shutdown();
+        int c = 0;
+        while (c < taskCount) {
+            TaskResult result = cs.take().get();
+            System.out.println(result.id + " " + result.time);
+            c++;
+        }
+    }
+
+    static class TaskResult {
+        String id;
+        float[][] result;
+        long time;
+
+        public TaskResult(String id, float[][] result, long time) {
+            this.id = id;
+            this.result = result;
+            this.time = time;
+        }
+    }
+
+    static class ServiceTask implements Callable<TaskResult> {
+
+        QuantizedDnn dnn;
+        Path dataPath;
+
+        public ServiceTask(QuantizedDnn dnn, Path path) {
+            this.dnn = dnn;
+            this.dataPath = path;
+        }
+
+        @Override
+        public TaskResult call() throws Exception {
+            long start = System.currentTimeMillis();
+            String id = dataPath.toFile().getName();
+            float[][] input = BatchData.loadRawBinary(id, dataPath.toFile()).getAsFloatMatrix();
+            float[][] result = dnn.calculate(input, 10);
+            return new TaskResult(id, result, System.currentTimeMillis() - start);
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
         //generateNN();
         //extendNetwork(new File("data/dnn.tv.model"), new File("data/dnn.extended.tv.model"));
-        generateAlignedInput(100);
-        runQuantized();
+        generateAlignedInput(1000, new File("data/16khz-10s.bin"));
+        //runQuantized();
         //runNaive();
-        lazyEmulation();
+        //lazyEmulation();
+        multiThreadedStressTest(8, 1000);
+
     }
+
+
 }
