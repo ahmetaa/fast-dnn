@@ -3,6 +3,7 @@ package suskun.nn;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.*;
@@ -143,54 +144,6 @@ public class FuncTest {
         return sb.toString();
     }
 
-    public static void multiThreadedStressTest(int threadCount, int taskCount) throws InterruptedException, ExecutionException {
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        CompletionService<TaskResult> cs = new ExecutorCompletionService<>(executor);
-        QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.extended.tv.model"));
-        for (int i = 0; i < taskCount; i++) {
-            cs.submit(new ServiceTask(dnn, new File("data/16khz-10s.bin").toPath()));
-        }
-        executor.shutdown();
-        int c = 0;
-        while (c < taskCount) {
-            TaskResult result = cs.take().get();
-            System.out.println(result.id + " " + result.time);
-            c++;
-        }
-    }
-
-    static class TaskResult {
-        String id;
-        float[][] result;
-        long time;
-
-        public TaskResult(String id, float[][] result, long time) {
-            this.id = id;
-            this.result = result;
-            this.time = time;
-        }
-    }
-
-    static class ServiceTask implements Callable<TaskResult> {
-
-        QuantizedDnn dnn;
-        Path dataPath;
-
-        public ServiceTask(QuantizedDnn dnn, Path path) {
-            this.dnn = dnn;
-            this.dataPath = path;
-        }
-
-        @Override
-        public TaskResult call() throws Exception {
-            long start = System.currentTimeMillis();
-            String id = dataPath.toFile().getName();
-            float[][] input = BatchData.loadRawBinary(id, dataPath.toFile()).getAsFloatMatrix();
-            float[][] result = dnn.calculate(input, 10);
-            return new TaskResult(id, result, System.currentTimeMillis() - start);
-        }
-    }
-
     public static void main(String[] args) throws Exception {
         //generateNN();
         //extendNetwork(new File("data/dnn.tv.model"), new File("data/dnn.extended.tv.model"));
@@ -198,8 +151,6 @@ public class FuncTest {
         //runQuantized();
         //runNaive();
         //lazyEmulation();
-        multiThreadedStressTest(8, 1000);
-
     }
 
 
