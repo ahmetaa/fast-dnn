@@ -56,6 +56,8 @@ class BatchData {
   BatchData(std::string fileName);
 
   BatchData(float *input, int vectorCount, int dimension);
+
+  ~BatchData() { delete[] data; }
 };
 
 /* A simple class for loading binary data from a file. It can load little/big
