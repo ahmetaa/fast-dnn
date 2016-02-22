@@ -35,6 +35,7 @@ JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculate(
   int len = batchData.vectorCount * quantizedDnn->outputDimension();
   jfloatArray result = env->NewFloatArray(len);
   env->SetFloatArrayRegion(result, 0, len, output);
+  delete output;
   return result;
 }
 
@@ -71,6 +72,7 @@ Java_suskun_nn_QuantizedDnn_calculateLazy(
   jsize len = env->GetArrayLength(outputMask);
   jfloatArray result = env->NewFloatArray(len);
   env->SetFloatArrayRegion(result, 0, len, res);
+  delete res;
   return result;
 
 }
