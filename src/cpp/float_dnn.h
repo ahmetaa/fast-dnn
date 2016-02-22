@@ -57,7 +57,7 @@ class BatchData {
 
   BatchData(float *input, int vectorCount, int dimension);
 
-  ~BatchData() { delete[] data; }
+  ~BatchData() { delete data; }
 };
 
 /* A simple class for loading binary data from a file. It can load little/big
