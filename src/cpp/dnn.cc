@@ -459,7 +459,7 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer) {
 
   // find maximum absolute value in the layer
   float max = -numeric_limits<float>::max();
-  for (int i = 0; i < floatLayer.inputDim; ++i) {
+  for (int i = 0; i < floatLayer.nodeCount; ++i) {
     float nodeMax = dnn::absMax(floatLayer.weights[i], floatLayer.inputDim,
                                 minWeight, maxWeight);
     if (nodeMax > max) {
