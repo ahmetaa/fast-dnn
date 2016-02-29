@@ -72,7 +72,6 @@ Java_suskun_nn_QuantizedDnn_calculateLazy(
   jsize len = env->GetArrayLength(outputMask);
   jfloatArray result = env->NewFloatArray(len);
   env->SetFloatArrayRegion(result, 0, len, res);
-  delete res;
   return result;
 
 }
