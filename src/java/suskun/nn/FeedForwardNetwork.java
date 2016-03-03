@@ -86,11 +86,15 @@ public class FeedForwardNetwork {
             featureBlocks.add(m.group(1).trim());
         }
 
-        if (featureBlocks.size() != 2) {
-            throw new IllegalStateException("Feature transformation file should have two vectors in it. But it has "
-                    + featureBlocks.size());
+        // if there is <Splice> block, omit it.
+        if (featureBlocks.size() == 3) {
+            featureBlocks = new ArrayList<>(featureBlocks.subList(1, featureBlocks.size()));
         }
 
+        if (featureBlocks.size() != 2) {
+            throw new IllegalStateException("Unexpected feature transformation vector size : "
+                    + featureBlocks.size());
+        }
         float[] shiftVector = fromString(featureBlocks.get(0));
         float[] scaleVector = fromString(featureBlocks.get(1));
 

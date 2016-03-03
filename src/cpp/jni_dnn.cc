@@ -2,34 +2,38 @@
 #include "dnn.h"
 #include "suskun_nn_QuantizedDnn.h"
 
-dnn::QuantizedDnn *quantizedDnn;
+static inline dnn::QuantizedDnn *getDnn(jlong handle) {
+  return reinterpret_cast<dnn::QuantizedDnn *>(handle);
+}
 
-JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_initialize(JNIEnv *env,
+JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_initialize(JNIEnv *env,
                                                               jobject obj,
                                                               jstring str) {
   // creates a global Quantized
   const char *chars = env->GetStringUTFChars(str, 0);
   const std::string modelPath(chars);
   const dnn::FloatDnn floatDnn(modelPath);
-  quantizedDnn = new dnn::QuantizedDnn(floatDnn);
+  dnn::QuantizedDnn *quantizedDnn = new dnn::QuantizedDnn(floatDnn);
   env->ReleaseStringUTFChars(str, chars);
+  return reinterpret_cast<jlong>(quantizedDnn);
 }
 
-JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_inputDimension(JNIEnv *env,
-                                                                  jobject obj) {
-  return (jint)quantizedDnn->inputDimension();
+JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_inputDimension(
+        JNIEnv *env, jobject obj, jlong handle) {
+  return (jint)(getDnn(handle)->inputDimension());
 }
 
 JNIEXPORT jint JNICALL
-Java_suskun_nn_QuantizedDnn_outputDimension(JNIEnv *env, jobject obj) {
-  return (jint)quantizedDnn->outputDimension();
+Java_suskun_nn_QuantizedDnn_outputDimension(JNIEnv *env, jobject obj, jlong handle) {
+  return (jint)(getDnn(handle)->outputDimension());
 }
 
 JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculate(
-    JNIEnv *env, jobject obj, jfloatArray jInputFlattened,
+    JNIEnv *env, jobject obj, jlong handle, jfloatArray jInputFlattened,
     jint inputVectorCount, jint inputDimension, jint batchSize) {
   dnn::BatchData batchData(env->GetFloatArrayElements(jInputFlattened, 0),
                            (int)inputVectorCount, (int)inputDimension);
+  dnn::QuantizedDnn *quantizedDnn = getDnn(handle);
   dnn::CalculationContext context(quantizedDnn, inputVectorCount, batchSize);
   float *output = context.calculate(&batchData);
   int len = batchData.vectorCount * quantizedDnn->outputDimension();
@@ -40,11 +44,11 @@ JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculate(
 }
 
 JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_getContext(
-    JNIEnv *env, jobject obj, jint inputVectorCount, jint batchSize) {
+    JNIEnv *env, jobject obj, jlong handle, jint inputVectorCount, jint batchSize) {
   // create a new context and return it to the Java side for making subsequent
   // calls on this context.
   dnn::CalculationContext *context =
-      new dnn::CalculationContext(quantizedDnn, inputVectorCount, batchSize);
+      new dnn::CalculationContext(getDnn(handle), inputVectorCount, batchSize);
   return reinterpret_cast<jlong>(context);
 }
 
@@ -73,7 +77,6 @@ Java_suskun_nn_QuantizedDnn_calculateLazy(
   jfloatArray result = env->NewFloatArray(len);
   env->SetFloatArrayRegion(result, 0, len, res);
   return result;
-
 }
 
 JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_deleteLazyContext(
@@ -83,12 +86,25 @@ JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_deleteLazyContext(
   delete context;
 }
 
-/*
- * Class:     suskun_nn_QuantizedDnn
- * Method:    deleteNativeDnn
- * Signature: ()V
- */
 JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_delete(
-    JNIEnv *env, jobject obj) {
-  delete quantizedDnn;
+    JNIEnv *env, jobject obj, jlong handle) {
+  delete getDnn(handle);
+}
+
+JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_layerDimension
+  (JNIEnv *env, jobject obj, jlong handle, jint layerIndex) {
+  dnn::QuantizedDnn *quantizedDnn = getDnn(handle);
+  int k = layerIndex;
+  if(k<0 || k>quantizedDnn->layerCount())
+      return (jint) -1;
+  if(k==0) {
+      return (jint) (quantizedDnn->inputLayer->nodeCount);
+  }
+  return (jint)(quantizedDnn->layers[layerIndex]->nodeCount);
+}
+
+JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_layerCount
+        (JNIEnv *env, jobject obj, jlong handle) {
+  dnn::QuantizedDnn *quantizedDnn = getDnn(handle);
+  return (jint)(quantizedDnn->layerCount() + 1);
 }

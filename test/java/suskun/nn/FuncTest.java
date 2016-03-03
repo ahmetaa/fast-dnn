@@ -2,11 +2,9 @@ package suskun.nn;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.*;
+
 
 public class FuncTest {
     public static void generateNN() throws IOException {
@@ -84,9 +82,9 @@ public class FuncTest {
         float[][] input = BatchData.loadRawBinary("a", new File("data/16khz.bin")).getAsFloatMatrix();
         byte[][] masks = generateMasks(
                 input.length,
-                dnn.outputDimension,
-                (int) (dnn.outputDimension * 0.40),
-                (int) (dnn.outputDimension * 0.03));
+                dnn.outputDimension(),
+                (int) (dnn.outputDimension() * 0.40),
+                (int) (dnn.outputDimension() * 0.03));
         long start = System.currentTimeMillis();
         QuantizedDnn.LazyContext context = dnn.getNewLazyContext(input.length);
         context.calculateUntilOutput(input);
@@ -147,10 +145,10 @@ public class FuncTest {
     public static void main(String[] args) throws Exception {
         //generateNN();
         //extendNetwork(new File("data/dnn.tv.model"), new File("data/dnn.extended.tv.model"));
-        generateAlignedInput(1000, new File("data/16khz-10s.bin"));
-        //runQuantized();
+        //generateAlignedInput(1000, new File("data/16khz-10s.bin"));
+        runQuantized();
         //runNaive();
-        //lazyEmulation();
+        lazyEmulation();
     }
 
 

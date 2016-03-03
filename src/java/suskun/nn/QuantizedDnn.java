@@ -30,15 +30,18 @@ public class QuantizedDnn {
         }
     }
 
-    int inputDimension;
-    int outputDimension;
+    private int inputDimension;
+    private int outputDimension;
+    private long nativeDnnHandle;
+
 
     // generates the dnn network in native code from binary network file.
-    native void initialize(String fileName);
+    native long initialize(String fileName);
 
     public static QuantizedDnn loadFromFile(File dnnFile) {
         QuantizedDnn dnn = new QuantizedDnn();
-        dnn.initialize(dnnFile.getAbsolutePath());
+        long nativeDnnHandle = dnn.initialize(dnnFile.getAbsolutePath());
+        dnn.nativeDnnHandle = nativeDnnHandle;
         dnn.inputDimension = dnn.inputDimension();
         dnn.outputDimension = dnn.outputDimension();
         return dnn;
@@ -73,34 +76,67 @@ public class QuantizedDnn {
     }
 
     public LazyContext getNewLazyContext(int inputVectorCount) {
-        long handle = getContext(inputVectorCount, 8);
+        long handle = getContext(nativeDnnHandle, inputVectorCount, 8);
         return new LazyContext(this, handle, inputVectorCount);
     }
 
-    native void deleteLazyContext(long handle);
+    private native void deleteLazyContext(long dnnHandle);
 
-    public native void delete();
+    private native void delete(long dnnHandle);
 
-    native long getContext(int inputVectorCount, int batchSize);
+    private native long getContext(long dnnHandle, int inputVectorCount, int batchSize);
 
-    native void calculateUntilOutput(long contextHandle, float[] input);
+    private native void calculateUntilOutput(long contextHandle, float[] input);
 
-    native float[] calculateLazy(long contextHandle, int inputIndex, byte[] outputMask);
+    private native float[] calculateLazy(long contextHandle, int inputIndex, byte[] outputMask);
 
-    native float[] calculate(float[] input, int inputVectorCount, int inputDimension, int batchSize);
+    private native float[] calculate(long dnnHandle, float[] input, int inputVectorCount, int inputDimension, int batchSize);
 
-    public native int inputDimension();
+    private native int inputDimension(long dnnHandle);
 
-    public native int outputDimension();
+    private native int outputDimension(long dnnHandle);
+
+    private native int layerDimension(long dnnHandle, int layerIndex);
+
+    private native int layerCount(long dnnHandle);
+
+    public int inputDimension() {
+        return inputDimension(nativeDnnHandle);
+    }
+
+    public int outputDimension() {
+        return outputDimension(nativeDnnHandle);
+    }
+
+    public void delete() {
+        delete(nativeDnnHandle);
+    }
+
+    public int layerDimension(int layerIndex) {
+        return layerDimension(nativeDnnHandle, layerIndex);
+    }
+
+    public int layerCount() {
+        return layerCount(nativeDnnHandle);
+    }
 
     public float[][] calculate(float[][] input) {
-        return calculate(input, 8);
+        return calculate(input, 10);
     }
 
     public float[][] calculate(float[][] input, int batchSize) {
+        if (input.length == 0) {
+            return new float[0][0];
+        }
+        if (input[0].length != inputDimension) {
+            throw new IllegalArgumentException(
+                    String.format("Input vector size %d must be equal with network input size %d",
+                            input[0].length, inputDimension));
+        }
+
         int dimension = input[0].length;
         float[] flattened = toVector(input);
-        float[] res1d = calculate(flattened, input.length, dimension, batchSize);
+        float[] res1d = calculate(nativeDnnHandle, flattened, input.length, dimension, batchSize);
         return toMatrix(res1d, input.length, outputDimension);
     }
 

@@ -10,9 +10,9 @@ extern "C" {
 /*
  * Class:     suskun_nn_QuantizedDnn
  * Method:    initialize
- * Signature: (Ljava/lang/String;)V
+ * Signature: (Ljava/lang/String;)J
  */
-JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_initialize
+JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_initialize
   (JNIEnv *, jobject, jstring);
 
 /*
@@ -26,18 +26,18 @@ JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_deleteLazyContext
 /*
  * Class:     suskun_nn_QuantizedDnn
  * Method:    delete
- * Signature: ()V
+ * Signature: (J)V
  */
 JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_delete
-  (JNIEnv *, jobject);
+  (JNIEnv *, jobject, jlong);
 
 /*
  * Class:     suskun_nn_QuantizedDnn
  * Method:    getContext
- * Signature: (II)J
+ * Signature: (JII)J
  */
 JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_getContext
-  (JNIEnv *, jobject, jint, jint);
+  (JNIEnv *, jobject, jlong, jint, jint);
 
 /*
  * Class:     suskun_nn_QuantizedDnn
@@ -58,26 +58,42 @@ JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculateLazy
 /*
  * Class:     suskun_nn_QuantizedDnn
  * Method:    calculate
- * Signature: ([FIII)[F
+ * Signature: (J[FIII)[F
  */
 JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculate
-  (JNIEnv *, jobject, jfloatArray, jint, jint, jint);
+  (JNIEnv *, jobject, jlong, jfloatArray, jint, jint, jint);
 
 /*
  * Class:     suskun_nn_QuantizedDnn
  * Method:    inputDimension
- * Signature: ()I
+ * Signature: (J)I
  */
 JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_inputDimension
-  (JNIEnv *, jobject);
+  (JNIEnv *, jobject, jlong);
 
 /*
  * Class:     suskun_nn_QuantizedDnn
  * Method:    outputDimension
- * Signature: ()I
+ * Signature: (J)I
  */
 JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_outputDimension
-  (JNIEnv *, jobject);
+  (JNIEnv *, jobject, jlong);
+
+/*
+ * Class:     suskun_nn_QuantizedDnn
+ * Method:    layerDimension
+ * Signature: (JI)I
+ */
+JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_layerDimension
+  (JNIEnv *, jobject, jlong, jint);
+
+/*
+ * Class:     suskun_nn_QuantizedDnn
+ * Method:    layerCount
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_layerCount
+  (JNIEnv *, jobject, jlong);
 
 #ifdef __cplusplus
 }
