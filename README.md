@@ -2,7 +2,7 @@
 This is a fast deep neural network library designed for DNNs used in Speech Recognition systems.  
 This is a runtime library designed to run on x86-64 CPUs. Training DNNs is not in the scope of this library. 
 
-Implementation improves the speed of the DNN calculations on CPUs using SIMD instructions, linear quantization, batch processing and lazy output calculation. 
+Implementation improves the speed of the DNN calculations on CPUs using SIMD instructions, linear quantization, batch processing, sigmoid lookup and lazy output calculation. 
 Ideas are taken from Vanhoucke et-al's [Improving the speed of neural networks on CPUs] (http://static.googleusercontent.com/media/research.google.com/en//pubs/archive/37631.pdf) paper. Library contains the C++ implementation and a Java API. 
 
 ## Basic usage
