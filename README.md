@@ -48,7 +48,7 @@ If amount of outputs for each input is below %50 of the total outputs, lazy calc
 
 The DNNs used in Automatic Speech Recognition (ASR) systems are usually very large. Especially server side applications use networks with sometimes more than 40 million parameters. In common ASR systems, for 1 seconds of speech, around 100 full network output activations needs to be calculated. This makes around 3-4 billion multiplication and sum operations for 1 second of speech.   
 
-One idea is to use GPUs for this task. Indeed they work and they are very fast adn should be preferred for batch processin if possible. But they are not as ubiquitous as CPUs and they may not be so practical for real-time speech processing.
+One idea is to use GPUs for this task. Indeed they work and they are very fast and should be preferred for batch processing if possible. But they are not as ubiquitous as CPUs and they may not be so practical for real-time speech processing.
 So, for some applications those DNNs needs to run fast in CPUs. Conventional calculation techniques becomes too slow for practical use, as stated in the paper, processing 1 second of speech takes around 4 seconds using
 using naive floating point matrix multiplications. Using floating point SIMD instructions comes to mind, but that only brings down the number to around 1 seconds. This is still not good enough (Libraries like Eigen and Blas does a much better job though). 
   
