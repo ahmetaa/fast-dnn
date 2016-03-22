@@ -61,7 +61,7 @@ are multiplied with 16 unsigned integers and results are summed nicely with a co
 of speech to around 0.25-0.3 seconds. Which is acceptable even for the runtime systems. For details, please refer to the paper.
 
 ## Actual Speed
-In general, this network is about a magnitude of order faster than a naive C++/Java implementation. According to my tests, it is about 30%-50% times faster than networks that uses BLAS (Via JBlas). When using Java API, it may take a small hit because of the JNI. This library allows usage of very large DNNs (such as 7 2048 node hidden layers and 8000 output nodes). But for small networks, speed difference may not be significant.
+In general, this network is about a magnitude of order faster than a naive C++/Java implementation. According to my tests, it is about 2 times faster than networks that uses BLAS (Via JBlas). Speed difference is lower when compared to C++ Blas, it is (around %30 faster) [https://plus.google.com/+AhmetAAkın/posts/RQwqZh9GyPg]. When using Java API, it may take a small hit because of the JNI. This library allows usage of very large DNNs (such as 7 2048 node hidden layers and 8000 output nodes). But for small networks, speed difference may not be significant.
 
 ## Limitations
 * Only tested in Ubuntu Linux x86-64 (Event then, C++ side may need to be re-compiled). 
