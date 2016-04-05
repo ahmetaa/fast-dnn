@@ -62,10 +62,10 @@ class QuantizedSigmoid {
 class SoftMax {
  private:
   float *expArray;
-  int size;
+  size_t size;
 
  public:
-  SoftMax(int size) {
+  SoftMax(size_t size) {
     expArray = new float[size];
     this->size = size;
   }
@@ -80,12 +80,12 @@ class FloatSimdLayer {
  public:
   __m128 *weights;
   float *bias;
-  int inputDimension;
-  int nodeCount;
+  size_t inputDimension;
+  size_t nodeCount;
 
   FloatSimdLayer(){};
 
-  FloatSimdLayer(FloatLayer *floatLayer);
+  FloatSimdLayer(const FloatLayer *floatLayer);
 
   void validate();
 
@@ -101,8 +101,8 @@ class QuantizedSimdLayer {
   __m128i *weights;
   float *bias;
 
-  int inputDim;
-  int nodeCount;
+  size_t inputDim;
+  size_t nodeCount;
   float multiplier;
 
   QuantizedSimdLayer(){};
@@ -127,13 +127,13 @@ class QuantizedDnn {
 
   QuantizedDnn(const FloatDnn &floatDnn);
 
-  int outputDimension() { return this->outputLayer->nodeCount; }
+  size_t outputDimension() { return this->outputLayer->nodeCount; }
 
-  int inputDimension() { return inputLayer->inputDimension; }
+  size_t inputDimension() { return inputLayer->inputDimension; }
 
-  int layerCount() { return (int)layers.size(); }
+  size_t layerCount() { return (size_t)layers.size(); }
 
-  void applyShiftAndScale(BatchData *input);
+  void applyShiftAndScale(const BatchData &input);
 
   ~QuantizedDnn() {
     delete inputLayer;
@@ -150,14 +150,14 @@ class CalculationContext {
   QuantizedDnn *dnn;
   // BatchData *input;
 
-  int inputCount;
+  size_t inputCount;
 
   // represents the amount of input vectors that outputs will be calculated in
   // one pass.
-  int batchSize;
+  size_t batchSize;
 
   // hidden layer node counts
-  int hiddenNodeCount;
+  size_t hiddenNodeCount;
 
   // quantized inputs. This is used in all layers except input layer. This is
   // actually a two dimensional matrix.
@@ -173,28 +173,28 @@ class CalculationContext {
   SoftMax *softMax;
 
 
-  CalculationContext(QuantizedDnn *dnn, int inputCount, int batchSize);
+  CalculationContext(QuantizedDnn *dnn, size_t inputCount, size_t batchSize);
 
-  void lastHiddenLayerActivations(BatchData *input);
+  void lastHiddenLayerActivations(const BatchData &input);
 
-  void quantizedLayerActivations(QuantizedSimdLayer *layer, int batchStartIndex,
+  void quantizedLayerActivations(const QuantizedSimdLayer *layer, size_t batchStartIndex,
                                  float *sequentialActivations);
 
-  void inputActivations(BatchData *input, int batchIndex);
+  void inputActivations(const BatchData &input, size_t batchIndex);
 
-  void addBias(float *bias);
+  void addBias(const float *bias);
 
-  void quantizedSigmoid(int batchIndex);
+  void quantizedSigmoid(size_t batchIndex);
 
   // void convertSequentialActivations();
 
   BatchData *calculateOutput();
 
-  void test(BatchData *input);
+  void test(const BatchData &input);
 
-  float *calculate(BatchData *input);
+  float *calculate(const BatchData &input);
 
-  float *lazyOutputActivations(int inputIndex, char *outputNodes);
+  float *lazyOutputActivations(size_t inputIndex, const char *outputNodes);
 
   ~CalculationContext() {
     delete quantizedActivations;

@@ -9,7 +9,6 @@ static inline dnn::QuantizedDnn *getDnn(jlong handle) {
 JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_initialize(JNIEnv *env,
                                                               jobject obj,
                                                               jstring str) {
-  // creates a global Quantized
   const char *chars = env->GetStringUTFChars(str, 0);
   const std::string modelPath(chars);
   const dnn::FloatDnn floatDnn(modelPath);
@@ -31,14 +30,17 @@ Java_suskun_nn_QuantizedDnn_outputDimension(JNIEnv *env, jobject obj, jlong hand
 JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculate(
     JNIEnv *env, jobject obj, jlong handle, jfloatArray jInputFlattened,
     jint inputVectorCount, jint inputDimension, jint batchSize) {
-  dnn::BatchData batchData(env->GetFloatArrayElements(jInputFlattened, 0),
-                           (int)inputVectorCount, (int)inputDimension);
+
+  jfloat *elements = env->GetFloatArrayElements(jInputFlattened, 0);
+  const dnn::BatchData batchData(elements,
+                           (size_t)inputVectorCount, (size_t)inputDimension);
   dnn::QuantizedDnn *quantizedDnn = getDnn(handle);
-  dnn::CalculationContext context(quantizedDnn, inputVectorCount, batchSize);
-  float *output = context.calculate(&batchData);
-  int len = batchData.vectorCount * quantizedDnn->outputDimension();
-  jfloatArray result = env->NewFloatArray(len);
-  env->SetFloatArrayRegion(result, 0, len, output);
+  dnn::CalculationContext context(quantizedDnn, (size_t)inputVectorCount,(size_t)batchSize);
+  float *output = context.calculate(batchData);
+
+  size_t len = batchData.vectorCount * quantizedDnn->outputDimension();
+  jfloatArray result = env->NewFloatArray((jsize)len);
+  env->SetFloatArrayRegion(result, 0, (jsize)len, output);
   delete output;
   return result;
 }
@@ -48,7 +50,7 @@ JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_getContext(
   // create a new context and return it to the Java side for making subsequent
   // calls on this context.
   dnn::CalculationContext *context =
-      new dnn::CalculationContext(getDnn(handle), inputVectorCount, batchSize);
+      new dnn::CalculationContext(getDnn(handle), (size_t)inputVectorCount, (size_t)batchSize);
   return reinterpret_cast<jlong>(context);
 }
 
@@ -59,9 +61,9 @@ JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_calculateUntilOutput(
       reinterpret_cast<dnn::CalculationContext *>(handle);
 
   // generate the data for calculation. TODO: BatchData may not be required
-  dnn::BatchData batchData(env->GetFloatArrayElements(input, 0),
+  const dnn::BatchData batchData(env->GetFloatArrayElements(input, 0),
                            context->inputCount, context->dnn->inputDimension());
-  context->lastHiddenLayerActivations(&batchData);
+  context->lastHiddenLayerActivations(batchData);
 }
 
 JNIEXPORT jfloatArray JNICALL
@@ -72,7 +74,7 @@ Java_suskun_nn_QuantizedDnn_calculateLazy(
       reinterpret_cast<dnn::CalculationContext *>(handle);
 
   float *res = context->lazyOutputActivations(
-      (int)inputIndex, (char *)env->GetByteArrayElements(outputMask, 0));
+      (size_t)inputIndex, (char *)env->GetByteArrayElements(outputMask, 0));
   jsize len = env->GetArrayLength(outputMask);
   jfloatArray result = env->NewFloatArray(len);
   env->SetFloatArrayRegion(result, 0, len, res);
@@ -94,7 +96,7 @@ JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_delete(
 JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_layerDimension
   (JNIEnv *env, jobject obj, jlong handle, jint layerIndex) {
   dnn::QuantizedDnn *quantizedDnn = getDnn(handle);
-  int k = layerIndex;
+  size_t k = (size_t)layerIndex;
   if(k<0 || k>quantizedDnn->layerCount())
       return (jint) -1;
   if(k==0) {

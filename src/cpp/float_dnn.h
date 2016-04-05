@@ -9,12 +9,13 @@
 #include <string>
 #include <assert.h>
 #include <iostream>
+#include <string.h>
 
 using namespace std;
 
 namespace dnn {
 
-template <typename T>
+template<typename T>
 void print_container(const T &c, int amount) {
   cout << "[";
   bool isFirst = true;
@@ -28,7 +29,7 @@ void print_container(const T &c, int amount) {
   cout << "]" << endl;
 }
 
-template <typename T>
+template<typename T>
 void print_int(const T &c, int amount) {
   cout << "[";
   bool isFirst = true;
@@ -37,7 +38,7 @@ void print_int(const T &c, int amount) {
       isFirst = false;
     else
       cout << ", ";
-    cout << (int)c[i];
+    cout << (int) c[i];
   }
   cout << "]" << endl;
 }
@@ -50,12 +51,12 @@ void print_int(const T &c, int amount) {
 class BatchData {
  public:
   float *data;
-  int dimension;
-  int vectorCount;
+  size_t dimension;
+  size_t vectorCount;
 
   BatchData(std::string fileName);
 
-  BatchData(float *input, int vectorCount, int dimension);
+  BatchData(float *input, size_t vectorCount, size_t dimension);
 
   ~BatchData() { delete data; }
 };
@@ -70,41 +71,66 @@ class BinaryLoader {
   int offset = 0;
   int length;
   bool littleEndian;
+  char *fourBytes;
+  char *eightBytes;
 
   BinaryLoader(std::string fileName, bool littleEndian);
 
   // loads a 32 bit integer.
   int load_int() {
-    assert(offset < length);
-    int val = *(reinterpret_cast<int *>(content + offset));
-    offset += 4;
-    return littleEndian ? val : toBigEndian(val);
+    char *bytes = loadFourBytes(sizeof(int));
+    return *(reinterpret_cast<int *>(bytes));
   }
 
-  // loads a 32 bit  float.
+  // loads to an int
+  size_t load_size_t() {
+    char *bytes = loadFourBytes(sizeof(size_t));
+    return *(reinterpret_cast<size_t *> (bytes));
+  }
+
+  // loads 4 bytes and casts to size_t
   float load_float() {
-    int val = load_int();
-    return *(reinterpret_cast<float *>(&val));
+    char *bytes = loadFourBytes(sizeof(float));
+    return *(reinterpret_cast<float *>(bytes));
   }
 
   // loads an array of 32 bit float array. However, it pads zeroes if paddedSize
   // is larger than amount.
-  float *loadFloatArray(int amount, int paddedSize) {
+  float *loadFloatArray(size_t amount, size_t paddedSize) {
     float *values = new float[paddedSize];
-    for (int i = 0; i < paddedSize; ++i) {
+    for (size_t i = 0; i < paddedSize; ++i) {
       values[i] = i < amount ? load_float() : 0;
     }
     return values;
   }
 
-  ~BinaryLoader() { delete[] content; }
+  ~BinaryLoader() {
+    delete[] content;
+    delete[] fourBytes;
+    delete[] eightBytes;
+  }
 
  private:
-  // convert value to big endian representation
-  int toBigEndian(int num) {
-    return ((num >> 24) & 0xff) | ((num << 8) & 0xff0000) |
-           ((num >> 8) & 0xff00) | ((num << 24) & 0xff000000);
+
+  char *loadFourBytes(int size) {
+    assert(offset < length);
+    assert(size >= 4 || size == 8);
+
+    char *bytes = size == 4 ? fourBytes : eightBytes;
+    std::fill(bytes, bytes + size, 0);
+
+    for (size_t i = 0; i < 4; ++i) {
+      char c = content[offset + i];
+      if (littleEndian) {
+        bytes[i] = content[offset + i];
+      } else {
+        bytes[3 - i] = c;
+      }
+    }
+    offset = offset + 4;
+    return bytes;
   }
+
 };
 
 // Layer for FloatDnn
@@ -112,16 +138,16 @@ class FloatLayer {
  public:
   float **weights;
   float *bias;
-  int inputDim;
-  int nodeCount;
+  size_t inputDim;
+  size_t nodeCount;
 
-  FloatLayer(){};
+  FloatLayer() { };
 
-  FloatLayer(float **weights, float *bias, int inputDim, int nodeCount)
+  FloatLayer(float **weights, float *bias, size_t inputDim, size_t nodeCount)
       : weights(weights),
         bias(bias),
         inputDim(inputDim),
-        nodeCount(nodeCount) {}
+        nodeCount(nodeCount) { }
 
   ~FloatLayer() {
     delete[] weights;
@@ -139,13 +165,13 @@ class FloatDnn {
 
   FloatDnn(std::string fileName);
 
-  long outputSize() const {
+  size_t outputSize() const {
     return this->layers[this->layers.size() - 1]->nodeCount;
   }
 
-  int inputDimension() const { return inputLayer->inputDim; }
+  size_t inputDimension() const { return inputLayer->inputDim; }
 
-  int layerCount() const { return (int)layers.size(); }
+  size_t layerCount() const { return layers.size(); }
 
   ~FloatDnn() {
     for (FloatLayer *layer : layers) {

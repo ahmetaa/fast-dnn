@@ -1,6 +1,3 @@
-//
-// Created by afsina on 5/24/15.
-//
 #include <iostream>
 #include <vector>
 #include "dnn.h"
@@ -8,43 +5,43 @@
 
 namespace dnn {
 
-int paddedSize(int num, int div);
+size_t paddedSize(size_t num, size_t div);
 
 FloatDnn::FloatDnn(std::string fileName) {
   BinaryLoader *loader = new BinaryLoader(fileName, false);
 
-  int layerCount = loader->load_int();
+  size_t layerCount = loader->load_size_t();
 
 #ifdef DEBUG
   cout << "Layer count = " << layerCount << endl;
 #endif
 
-  this->layers = std::vector<FloatLayer *>((unsigned long)layerCount);
-  int actualInputDimension = 0;
+  this->layers = std::vector<FloatLayer *>(layerCount);
+  size_t actualInputDimension = 0;
 
-  for (int j = 0; j < layerCount; j++) {
-    int inputDimension = loader->load_int();
+  for (size_t j = 0; j < layerCount; j++) {
+    size_t inputDimension = loader->load_size_t();
     if (j == 0) {
       actualInputDimension = inputDimension;
     }
     // make sure input is a factor of 4 for the first layer
-    int paddedInputDim =
+    size_t paddedInputDim =
         j == 0 ? dnn::paddedSize(inputDimension, 4) : inputDimension;
-    int outputDimension = loader->load_int();
+    size_t outputDimension = loader->load_size_t();
 
 #ifdef DEBUG
     cout << "Layer " << j << " input dimension = " << inputDimension << endl;
     if (j == 0) {
       cout << "Layer " << j << " padded input dimension = " << paddedInputDim
-           << endl;
+          << endl;
     }
     cout << "Layer " << j << " output dimension = " << outputDimension << endl;
 #endif
     // load weights
     float **weights = new float *[outputDimension];
-    for (int oo = 0; oo < outputDimension; oo++) {
+    for (size_t oo = 0; oo < outputDimension; oo++) {
       weights[oo] = new float[paddedInputDim];
-      for (int ii = 0; ii < paddedInputDim; ii++) {
+      for (size_t ii = 0; ii < paddedInputDim; ii++) {
         float d = ii < inputDimension ? loader->load_float() : 0;
         weights[oo][ii] = d;
       }
@@ -52,7 +49,7 @@ FloatDnn::FloatDnn(std::string fileName) {
 
     // load bias values.
     float *bias = new float[outputDimension];
-    for (int ii = 0; ii < outputDimension; ii++) {
+    for (size_t ii = 0; ii < outputDimension; ii++) {
       bias[ii] = loader->load_float();
     }
 
@@ -75,15 +72,19 @@ FloatDnn::FloatDnn(std::string fileName) {
   delete loader;
 }
 
-int paddedSize(int num, int div) {
-  int dif = div - num % div;
+size_t paddedSize(size_t num, size_t div) {
+  size_t dif = div - num % div;
   if (dif == div)
     return num;
   else
     return num + dif;
 }
 
-BinaryLoader::BinaryLoader(std::string fileName, bool littleEndian) {
+BinaryLoader::BinaryLoader(const std::string fileName, bool littleEndian) {
+
+  this->fourBytes = new char[4];
+  this->eightBytes = new char[8];
+
   FILE *pFile = fopen(fileName.c_str(), "rb");
 
   // obtain file size:
@@ -93,12 +94,12 @@ BinaryLoader::BinaryLoader(std::string fileName, bool littleEndian) {
 
   // allocate memory to contain the whole file:
   this->content = new char[lSize];
-  this->length = (int)lSize;
+  this->length = (int) lSize;
   this->littleEndian = littleEndian;
 
   // copy the file into the buffer:
-  size_t result = fread(this->content, 1, (size_t)lSize, pFile);
-  if ((long)result != lSize) {
+  size_t result = fread(this->content, 1, (size_t) lSize, pFile);
+  if ((long) result != lSize) {
     fputs("Reading error", stderr);
     exit(3);
   }
@@ -106,18 +107,18 @@ BinaryLoader::BinaryLoader(std::string fileName, bool littleEndian) {
   fclose(pFile);
 }
 
-BatchData::BatchData(std::string fileName) {
+BatchData::BatchData(const std::string fileName) {
   BinaryLoader *loader = new BinaryLoader(fileName, false);
 
-  int frameCount = loader->load_int();
-  this->dimension = loader->load_int();
+  size_t frameCount = loader->load_size_t();
+  this->dimension = loader->load_size_t();
   this->vectorCount = frameCount;
 
   this->data = new float[this->dimension * frameCount]();
 
   int t = 0;
-  for (int j = 0; j < frameCount; ++j) {
-    for (int k = 0; k < this->dimension; ++k) {
+  for (size_t j = 0; j < frameCount; ++j) {
+    for (size_t k = 0; k < this->dimension; ++k) {
       float d = loader->load_float();
       this->data[t] = d;
       t++;
@@ -127,7 +128,7 @@ BatchData::BatchData(std::string fileName) {
   delete loader;
 }
 
-BatchData::BatchData(float *input, int vectorCount, int dimension) {
+BatchData::BatchData(float *input, size_t vectorCount, size_t dimension) {
   this->data = input;
   this->vectorCount = vectorCount;
   this->dimension = dimension;
