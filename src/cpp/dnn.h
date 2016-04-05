@@ -105,9 +105,7 @@ class QuantizedSimdLayer {
   size_t nodeCount;
   float multiplier;
 
-  QuantizedSimdLayer(){};
-
-  QuantizedSimdLayer(const FloatLayer &floatLayer);
+  QuantizedSimdLayer(const FloatLayer &floatLayer, float cutoff);
 
   ~QuantizedSimdLayer() {
     aligned_free(weights);
@@ -125,7 +123,7 @@ class QuantizedDnn {
   __m128 *shift;
   __m128 *scale;
 
-  QuantizedDnn(const FloatDnn &floatDnn);
+  QuantizedDnn(const FloatDnn &floatDnn, float cutoff);
 
   size_t outputDimension() { return this->outputLayer->nodeCount; }
 

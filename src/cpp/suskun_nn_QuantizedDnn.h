@@ -10,10 +10,10 @@ extern "C" {
 /*
  * Class:     suskun_nn_QuantizedDnn
  * Method:    initialize
- * Signature: (Ljava/lang/String;)J
+ * Signature: (Ljava/lang/String;F)J
  */
 JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_initialize
-  (JNIEnv *, jobject, jstring);
+  (JNIEnv *, jobject, jstring, jfloat);
 
 /*
  * Class:     suskun_nn_QuantizedDnn

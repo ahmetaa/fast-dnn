@@ -19,7 +19,7 @@ int main() {
   std::string featureName = "/home/kodlab/projects/fast-dnn/data/16khz.bin";
   dnn::BatchData batchData(featureName);
 
-  dnn::QuantizedDnn qDnn(floatDnn);
+  dnn::QuantizedDnn qDnn(floatDnn, 3);
 
   dnn::CalculationContext context(&qDnn, batchData.vectorCount, 8);
 
@@ -44,7 +44,6 @@ static float inline quantizedNodeSum(const size_t vectorSize,
 
 const float WEIGHT_MULTIPLIER = 127;
 
-const float MAX_WEIGHT_THRESHOLD = 3;
 
 QuantizedSigmoid::QuantizedSigmoid() {
   int size = SIGMOID_LOOKUP_SIZE;
@@ -449,11 +448,11 @@ void FloatSimdLayer::validate() {
   }
 }
 
-QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer) {
+QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer, float cutoff) {
   this->nodeCount = floatLayer.nodeCount;
   this->inputDim = floatLayer.inputDim;
-  float maxWeight = MAX_WEIGHT_THRESHOLD;
-  float minWeight = -MAX_WEIGHT_THRESHOLD;
+  float maxWeight = cutoff;
+  float minWeight = -cutoff;
 
   // find maximum absolute value in the layer
   float max = -numeric_limits<float>::max();
@@ -506,14 +505,14 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer) {
             this->bias);
 }
 
-QuantizedDnn::QuantizedDnn(const FloatDnn &floatDnn) {
+QuantizedDnn::QuantizedDnn(const FloatDnn &floatDnn, float cutoff) {
   this->inputLayer = new FloatSimdLayer(floatDnn.inputLayer);
   this->layers = std::vector<QuantizedSimdLayer *>();
   this->layers.reserve((unsigned long) (floatDnn.layerCount() - 1));
 
   for (size_t i = 1; i < floatDnn.layerCount(); i++) {
     dnn::QuantizedSimdLayer *layer =
-        new dnn::QuantizedSimdLayer(*floatDnn.layers[i]);
+        new dnn::QuantizedSimdLayer(*floatDnn.layers[i], cutoff);
     this->layers.push_back(layer);
   }
 

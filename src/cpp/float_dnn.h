@@ -76,19 +76,19 @@ class BinaryLoader {
 
   BinaryLoader(std::string fileName, bool littleEndian);
 
-  // loads a 32 bit integer.
+  // loads 4 byte and returns the value as int
   int load_int() {
     char *bytes = loadFourBytes(sizeof(int));
     return *(reinterpret_cast<int *>(bytes));
   }
 
-  // loads to an int
+  // loads 4 byte and returns the value as size_t
   size_t load_size_t() {
     char *bytes = loadFourBytes(sizeof(size_t));
     return *(reinterpret_cast<size_t *> (bytes));
   }
 
-  // loads 4 bytes and casts to size_t
+  // loads 4 byte and returns the value as float
   float load_float() {
     char *bytes = loadFourBytes(sizeof(float));
     return *(reinterpret_cast<float *>(bytes));
@@ -112,6 +112,8 @@ class BinaryLoader {
 
  private:
 
+  // loads 4 byte content, converts to little endian representation if necessary.
+  // resulting byte array is [size] bytes. [size] can only be 4 or 8 bytes.
   char *loadFourBytes(int size) {
     assert(offset < length);
     assert(size >= 4 || size == 8);
@@ -155,7 +157,7 @@ class FloatLayer {
   }
 };
 
-// DNN with 32 bit floating numbers.
+// DNN with 32 bit floating numbers. This is only used for constructing a QuantizedDnn.
 class FloatDnn {
  public:
   FloatLayer *inputLayer;

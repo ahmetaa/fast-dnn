@@ -6,13 +6,13 @@ static inline dnn::QuantizedDnn *getDnn(jlong handle) {
   return reinterpret_cast<dnn::QuantizedDnn *>(handle);
 }
 
-JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_initialize(JNIEnv *env,
-                                                              jobject obj,
-                                                              jstring str) {
+JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_initialize
+    (JNIEnv *env, jobject obj, jstring str, jfloat cutoff) {
+
   const char *chars = env->GetStringUTFChars(str, 0);
   const std::string modelPath(chars);
   const dnn::FloatDnn floatDnn(modelPath);
-  dnn::QuantizedDnn *quantizedDnn = new dnn::QuantizedDnn(floatDnn);
+  dnn::QuantizedDnn *quantizedDnn = new dnn::QuantizedDnn(floatDnn, cutoff);
   env->ReleaseStringUTFChars(str, chars);
   return reinterpret_cast<jlong>(quantizedDnn);
 }

@@ -36,15 +36,29 @@ public class QuantizedDnn {
 
 
     // generates the dnn network in native code from binary network file.
-    native long initialize(String fileName);
+    native long initialize(String fileName, float weightCutOffValue);
 
-    public static QuantizedDnn loadFromFile(File dnnFile) {
+    /**
+     * Creates a quantized dnn with a certain weight cut-off value.
+     * weightCutOffValue is a positive number, usually between 1 and 5.
+     * when linearly quantizing weights in hidden units, the walues more than we
+     */
+    public static QuantizedDnn loadFromFile(File dnnFile, float weightCutOffValue) {
+        if(weightCutOffValue<=0){
+            throw new IllegalArgumentException("Weight cut off value must be positive. But it is " + weightCutOffValue);
+        }
         QuantizedDnn dnn = new QuantizedDnn();
-        long nativeDnnHandle = dnn.initialize(dnnFile.getAbsolutePath());
-        dnn.nativeDnnHandle = nativeDnnHandle;
+        dnn.nativeDnnHandle = dnn.initialize(dnnFile.getAbsolutePath(), weightCutOffValue);
         dnn.inputDimension = dnn.inputDimension();
         dnn.outputDimension = dnn.outputDimension();
         return dnn;
+    }
+
+    /**
+     * Creates a quantized dnn with weight cut-off value = 3
+     */
+    public static QuantizedDnn loadFromFile(File dnnFile) {
+        return loadFromFile(dnnFile, 3f);
     }
 
     public static class LazyContext {
