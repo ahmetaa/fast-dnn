@@ -41,7 +41,8 @@ public class QuantizedDnn {
     /**
      * Creates a quantized dnn with a certain weight cut-off value.
      * weightCutOffValue is a positive number, usually between 1 and 5.
-     * when linearly quantizing weights in hidden units, the walues more than we
+     * When linearly quantizing weights in hidden units, the values outside
+     * [-weightCutOffValue, weightCutOffValue] are trimmed.
      */
     public static QuantizedDnn loadFromFile(File dnnFile, float weightCutOffValue) {
         if(weightCutOffValue<=0){
