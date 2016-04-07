@@ -161,7 +161,7 @@ static inline float __horizontalSumFloat32(__m128 x) {
   return _mm_cvtss_f32(x);
 }
 
-void QuantizedDnn::apply_shift_and_scale(const BatchData &batchInput) {
+void QuantizedDnn::ApplyShiftAndScale(const BatchData &batchInput) {
   // apply shift and scale with SIMD
   const size_t size = batchInput.dimension() / 4;
 
@@ -373,7 +373,7 @@ static inline int __horizontalSumInt32(__m128i x) {
 }
 
 void CalculationContext::LastHiddenLayerActivations(const BatchData &input) {
-  this->dnn_->apply_shift_and_scale(input);
+  this->dnn_->ApplyShiftAndScale(input);
 
   const size_t frameCount = input.vector_count();
 
@@ -433,7 +433,7 @@ BatchData *CalculationContext::CalculateOutput() {
   return result;
 }
 
-void FloatSimdLayer::validate() {
+void FloatSimdLayer::Validate() {
   const size_t vectorInputSize = this->input_dimension_ / 4;
 
   __m128 *w = weights_;

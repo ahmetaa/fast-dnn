@@ -88,7 +88,7 @@ class FloatSimdLayer: public LayerBase {
 
   __m128 *weights() const { return weights_; }
 
-  void validate();
+  void Validate();
 
   ~FloatSimdLayer() {
     aligned_free(weights_);
@@ -143,7 +143,7 @@ class QuantizedDnn {
 
   std::vector<QuantizedSimdLayer *> layers() const { return layers_; };
 
-  void apply_shift_and_scale(const BatchData &input);
+  void ApplyShiftAndScale(const BatchData &input);
 
   ~QuantizedDnn() {
     delete input_layer_;
