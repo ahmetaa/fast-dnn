@@ -19,12 +19,12 @@ JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_initialize
 
 JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_inputDimension(
         JNIEnv *env, jobject obj, jlong handle) {
-  return (jint)(getDnn(handle)->inputDimension());
+  return (jint)(getDnn(handle)->input_dimension());
 }
 
 JNIEXPORT jint JNICALL
 Java_suskun_nn_QuantizedDnn_outputDimension(JNIEnv *env, jobject obj, jlong handle) {
-  return (jint)(getDnn(handle)->outputDimension());
+  return (jint)(getDnn(handle)->output_dimension());
 }
 
 JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculate(
@@ -36,9 +36,9 @@ JNIEXPORT jfloatArray JNICALL Java_suskun_nn_QuantizedDnn_calculate(
                            (size_t)inputVectorCount, (size_t)inputDimension);
   dnn::QuantizedDnn *quantizedDnn = getDnn(handle);
   dnn::CalculationContext context(quantizedDnn, (size_t)inputVectorCount,(size_t)batchSize);
-  float *output = context.calculate(batchData);
+  float *output = context.Calculate(batchData);
 
-  size_t len = batchData.vectorCount * quantizedDnn->outputDimension();
+  size_t len = batchData.vector_count() * quantizedDnn->output_dimension();
   jfloatArray result = env->NewFloatArray((jsize)len);
   env->SetFloatArrayRegion(result, 0, (jsize)len, output);
   delete output;
@@ -62,8 +62,8 @@ JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_calculateUntilOutput(
 
   // generate the data for calculation. TODO: BatchData may not be required
   const dnn::BatchData batchData(env->GetFloatArrayElements(input, 0),
-                           context->inputCount, context->dnn->inputDimension());
-  context->lastHiddenLayerActivations(batchData);
+                                 context->input_count(), context->dnn()->input_dimension());
+  context->LastHiddenLayerActivations(batchData);
 }
 
 JNIEXPORT jfloatArray JNICALL
@@ -73,8 +73,8 @@ Java_suskun_nn_QuantizedDnn_calculateLazy(
   dnn::CalculationContext *context =
       reinterpret_cast<dnn::CalculationContext *>(handle);
 
-  float *res = context->lazyOutputActivations(
-      (size_t)inputIndex, (char *)env->GetByteArrayElements(outputMask, 0));
+  float *res = context->LazyOutputActivations(
+      (size_t) inputIndex, (char *) env->GetByteArrayElements(outputMask, 0));
   jsize len = env->GetArrayLength(outputMask);
   jfloatArray result = env->NewFloatArray(len);
   env->SetFloatArrayRegion(result, 0, len, res);
@@ -97,16 +97,16 @@ JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_layerDimension
   (JNIEnv *env, jobject obj, jlong handle, jint layerIndex) {
   dnn::QuantizedDnn *quantizedDnn = getDnn(handle);
   size_t k = (size_t)layerIndex;
-  if(k<0 || k>quantizedDnn->layerCount())
+  if(k<0 || k> quantizedDnn->layer_count())
       return (jint) -1;
   if(k==0) {
-      return (jint) (quantizedDnn->inputLayer->nodeCount);
+      return (jint) (quantizedDnn->input_layer()->node_count());
   }
-  return (jint)(quantizedDnn->layers[layerIndex]->nodeCount);
+  return (jint)(quantizedDnn->layers()[layerIndex]->node_count());
 }
 
 JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_layerCount
         (JNIEnv *env, jobject obj, jlong handle) {
   dnn::QuantizedDnn *quantizedDnn = getDnn(handle);
-  return (jint)(quantizedDnn->layerCount() + 1);
+  return (jint)(quantizedDnn->layer_count() + 1);
 }
