@@ -67,6 +67,10 @@ class BatchData {
 
   float *data() const { return data_; }
 
+  void dump();
+
+  void dumpToFile(std::string fileName, bool binary);
+
   ~BatchData() { delete data_; }
 };
 
@@ -182,7 +186,7 @@ class FloatLayer: public LayerBase {
   FloatLayer() { };
 
   FloatLayer(float **weights, float *bias, size_t inputDim, size_t nodeCount)
-      : weights_(weights), LayerBase(bias, inputDim, nodeCount) { }
+      : LayerBase(bias, inputDim, nodeCount), weights_(weights) { }
 
   float **weights() const { return weights_; }
 

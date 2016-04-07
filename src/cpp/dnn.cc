@@ -13,17 +13,44 @@
 
 using namespace std;
 
-int main() {
-  std::string fName = "/home/kodlab/projects/fast-dnn/data/dnn.tv.model";
-  const dnn::FloatDnn floatDnn(fName);
-  std::string featureName = "/home/kodlab/projects/fast-dnn/data/16khz.bin";
-  dnn::BatchData batchData(featureName);
+int main(int argc, char *argv[]) {
+  if (argc < 3) {
+    cout << "At least two parameters are required. "
+        "[model-path] [binary-input-path] Optional[out-path] Optional[out-type BIN|TXT]" << endl;
+    return -1;
+  }
+  std::vector<std::string> params(argv, argv + argc);
+  string model_path = params[1];
+  string input_path = params[2];
+  string output_path = params.size() > 3 ? params[3] : "";
+  string out_type = params.size() > 4 ? params[4] : "";
+
+  bool binary = false;
+  if (out_type.size() > 0) {
+    binary = out_type.compare("BIN") == 0;
+    if (!binary && out_type.compare("TXT")) {
+      cout << "Unidentified output file type = " << out_type;
+      return -1;
+    }
+  }
+
+  const dnn::FloatDnn floatDnn(model_path);
+
+  dnn::BatchData batchData(input_path);
 
   dnn::QuantizedDnn qDnn(floatDnn, 3);
 
   dnn::CalculationContext context(&qDnn, batchData.vector_count(), 8);
 
-  context.Test(batchData);
+  dnn::BatchData *output = context.Calculate(batchData);
+
+  if (output_path.size() == 0) {
+    output->dump();
+  } else {
+    output->dumpToFile(output_path, binary);
+  }
+
+  delete output;
 
   return 0;
 }
@@ -149,10 +176,9 @@ void CalculationContext::Test(const BatchData &input) {
   std::cout << "Elapsed:" << ms.count() << std::endl;
 }
 
-float *CalculationContext::Calculate(const BatchData &input) {
+BatchData *CalculationContext::Calculate(const BatchData &input) {
   this->LastHiddenLayerActivations(input);
-  BatchData *output = CalculateOutput();
-  return output->data();
+  return CalculateOutput();
 }
 
 static inline float __horizontalSumFloat32(__m128 x) {
@@ -178,7 +204,8 @@ void QuantizedDnn::ApplyShiftAndScale(const BatchData &batchInput) {
   }
 }
 
-CalculationContext::CalculationContext(QuantizedDnn *dnn, size_t input_count,
+CalculationContext::CalculationContext(QuantizedDnn *dnn,
+                                       size_t input_count,
                                        size_t batch_size) {
   this->dnn_ = dnn;
   this->batch_size_ = batch_size;
@@ -256,7 +283,6 @@ void CalculationContext::QuantizedSigmoid(size_t batch_index) {
     // calculate quantized sigmoid. And write the result
     for (size_t i = 0; i < this->hidden_node_count_; ++i) {
       qStart[i] = dnn::qSigmoid->get(currentActivations[i]);
-      //qStart[i] = dnn::sigmoid(currentActivations[i]);
     }
     // advance the float and quantized activations.
     qStart += hidden_node_count_;
@@ -264,22 +290,23 @@ void CalculationContext::QuantizedSigmoid(size_t batch_index) {
   }
 }
 
-void CalculationContext::QuantizedLayerActivations(const QuantizedSimdLayer *layer,
+// calculates linear activation values for a quantized layer. a batch of input is used during calculations.
+void CalculationContext::QuantizedLayerActivations(const QuantizedSimdLayer &layer,
                                                    size_t batch_start_index,
-                                                   float *sequential_activations) {
-  size_t vectorSize = layer->input_dimension() / 16;
+                                                   float *linear_activations) {
+  size_t vectorSize = layer.input_dimension() / 16;
 
   // get quantized weight array for the node i.
-  const __m128i *w = layer->weights();
+  const __m128i *w = layer.weights();
 
-  const size_t nodeCount = layer->node_count();
+  const size_t nodeCount = layer.node_count();
   float dequantizationCoefficient =
-      layer->multiplier() * dnn::SIGMOID_QUANTIZATION_MULTIPLIER;
+      layer.multiplier() * dnn::SIGMOID_QUANTIZATION_MULTIPLIER;
 
   // for each node
   for (size_t i = 0; i < nodeCount; ++i) {
     unsigned char *input =
-        &this->quantized_activations_[batch_start_index * layer->input_dimension()];
+        &this->quantized_activations_[batch_start_index * layer.input_dimension()];
 
     // for inputs in the batch.
     for (size_t k = 0; k < this->batch_size_; k++) {
@@ -288,8 +315,8 @@ void CalculationContext::QuantizedLayerActivations(const QuantizedSimdLayer *lay
       float sum = dnn::quantizedNodeSum(vectorSize, input, w);
 
       const size_t i1 = k * nodeCount + i;
-      sequential_activations[i1] = sum / dequantizationCoefficient;
-      input += layer->input_dimension();
+      linear_activations[i1] = sum / dequantizationCoefficient;
+      input += layer.input_dimension();
     }
     w += vectorSize;
   }
@@ -336,7 +363,6 @@ float *CalculationContext::LazyOutputActivations(size_t inputIndex,
       layer->multiplier() * dnn::SIGMOID_QUANTIZATION_MULTIPLIER;
 
   float *result = this->single_output_;
-  const __m128i *weights = layer->weights();
   const float *bias = layer->bias();
 
   // for each node
@@ -347,18 +373,18 @@ float *CalculationContext::LazyOutputActivations(size_t inputIndex,
       continue;
     }
 
-    __m128i w = weights[i * vectorSize];
-
     // input batch start.
     unsigned char *input =
         &this->quantized_activations_[inputIndex * layer->input_dimension()];
 
     if (inputIndex >= this->input_count_) break;
 
-    float sum = dnn::quantizedNodeSum(vectorSize, input, &w);
+    float sum = dnn::quantizedNodeSum(vectorSize,
+                                      input,
+                                      &layer->weights()[i * vectorSize]);
 
     // we set the result after dequantization and adding bias.
-    result[i] = sum / dequantizationCoefficient + layer->bias()[i];
+    result[i] = sum / dequantizationCoefficient + bias[i];
   }
 
   this->soft_max_->apply(result);
@@ -386,11 +412,11 @@ void CalculationContext::LastHiddenLayerActivations(const BatchData &input) {
 
   // calculate hidden layer activations, except the output.
   for (size_t j = 0; j < this->dnn_->layer_count() - 1; ++j) {
-    const QuantizedSimdLayer *layer = this->dnn_->layers()[j];
+    const QuantizedSimdLayer &layer = *this->dnn_->layers()[j];
 
     for (size_t i = 0; i < frameCount; i += batch_size_) {
       QuantizedLayerActivations(layer, i, this->activations_);
-      AddBias(layer->bias());
+      AddBias(layer.bias());
       QuantizedSigmoid(i);
     }
   }
@@ -403,30 +429,21 @@ BatchData *CalculationContext::CalculateOutput() {
 
   // calculate in batches.
   for (size_t i = 0; i < this->input_count_; i += batch_size_) {
-    QuantizedLayerActivations(this->dnn_->output_layer(), i, &outputs[i * outSize]);
+    QuantizedSimdLayer &layer = *this->dnn_->output_layer();
+    QuantizedLayerActivations(layer, i, &outputs[i * outSize]);
   }
 
   // add bias values and calculate softMax for the output vectors.
-  const float *biasArr = this->dnn_->output_layer()->bias();
-
-  // add bias and apply soft max.
-  SoftMax *softMax = new SoftMax(outSize);
+  const float *bias = this->dnn_->output_layer()->bias();
 
   for (size_t i = 0; i < this->input_count_; i++) {
     float *out = &outputs[i * outSize];
     for (size_t j = 0; j < outSize; ++j) {
       // for inputs in the batch.
-      out[j] += biasArr[j];
+      out[j] += bias[j];
     }
-    softMax->apply(&outputs[i * outSize]);
-#ifdef DEBUG
-    if (i < 30) {
-      dnn::print_container(&outputs[i * outSize], 16);
-    }
-#endif
+    this->soft_max_->apply(&outputs[i * outSize]);
   }
-
-  delete softMax;
 
   BatchData *result = new BatchData(outputs, this->input_count_, outSize);
 
@@ -460,7 +477,8 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer, float cutof
   // find maximum absolute value in the layer
   float max = -numeric_limits<float>::max();
   for (size_t i = 0; i < floatLayer.node_count(); ++i) {
-    float nodeMax = dnn::absMax(floatLayer.weights()[i], floatLayer.input_dimension(),
+    float nodeMax = dnn::absMax(floatLayer.weights()[i],
+                                floatLayer.input_dimension(),
                                 minWeight, maxWeight);
     if (nodeMax > max) {
       max = nodeMax;
@@ -504,7 +522,8 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer, float cutof
 
   this->bias_ = new float[floatLayer.node_count()];
   // copy the bias values. We do not apply quantization.
-  std::copy(floatLayer.bias(), floatLayer.bias() + floatLayer.node_count(),
+  std::copy(floatLayer.bias(),
+            floatLayer.bias() + floatLayer.node_count(),
             this->bias_);
 }
 

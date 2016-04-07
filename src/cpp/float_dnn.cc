@@ -2,6 +2,7 @@
 #include <vector>
 #include "dnn.h"
 #include <chrono>
+#include <fstream>
 
 namespace dnn {
 
@@ -133,4 +134,58 @@ BatchData::BatchData(float *input, size_t vectorCount, size_t dimension) {
   this->vector_count_ = vectorCount;
   this->dimension_ = dimension;
 }
+
+void BatchData::dump() {
+  float *p = data_;
+  for (size_t i = 0; i < vector_count_; ++i) {
+    for (size_t j = 0; j < dimension_; ++j) {
+      printf("%f", *p);
+      if (j < dimension_ - 1) {
+        cout << " ";
+      }
+      p++;
+    }
+    cout << endl;
+  }
 }
+
+void BatchData::dumpToFile(std::string fileName, bool binary) {
+  ofstream os;
+  if (binary) {
+    os.open(fileName, ios::binary | ios::out);
+  } else {
+    os.open(fileName);
+  }
+
+  if (!os.is_open()) {
+    cout << "Cannot open file " << fileName << endl;
+    return;
+  }
+  if (binary) {
+    const unsigned int v = static_cast<unsigned int>(vector_count_);
+    const unsigned int d = static_cast<unsigned int>(dimension_);
+    os.write(reinterpret_cast<const char *>(&v), sizeof(int));
+    os.write(reinterpret_cast<const char *>(&d), sizeof(int));
+  }
+  float *p = data_;
+  for (size_t i = 0; i < vector_count_; ++i) {
+    for (size_t j = 0; j < dimension_; ++j) {
+      if (binary) {
+        os.write(reinterpret_cast<const char *>(p), sizeof(float));
+      } else {
+        os << printf("%f", *p);
+      }
+      if (!binary && (j < dimension_ - 1)) {
+        os << " ";
+      }
+      p++;
+    }
+    if (!binary) {
+      cout << endl;
+    }
+
+  }
+  os.close();
+}
+}
+

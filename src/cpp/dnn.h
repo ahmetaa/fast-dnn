@@ -192,9 +192,9 @@ class CalculationContext {
   void LastHiddenLayerActivations(const BatchData &input);
 
   void QuantizedLayerActivations(
-      const QuantizedSimdLayer *layer,
+      const QuantizedSimdLayer &layer,
       size_t batch_start_index,
-      float *sequential_activations);
+      float *linear_activations);
 
   void InputActivations(const BatchData &input, size_t batch_index);
 
@@ -210,7 +210,7 @@ class CalculationContext {
 
   void Test(const BatchData &input);
 
-  float *Calculate(const BatchData &input);
+  BatchData *Calculate(const BatchData &input);
 
   float *LazyOutputActivations(size_t inputIndex, const char *outputNodes);
 
