@@ -21,9 +21,17 @@ int main(int argc, char *argv[]) {
   }
   std::vector<std::string> params(argv, argv + argc);
   string model_path = params[1];
+  cout << "Model File  = " << model_path << endl;
   string input_path = params[2];
+  cout << "Input File  = " << input_path << endl;
   string output_path = params.size() > 3 ? params[3] : "";
+  if (output_path.size() > 0) {
+    cout << "Output File = " << output_path << endl;
+  }
   string out_type = params.size() > 4 ? params[4] : "";
+  if (out_type.size() > 0) {
+    cout << "Output Type = " << out_type << endl;
+  }
 
   bool binary = false;
   if (out_type.size() > 0) {
@@ -34,15 +42,29 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  const dnn::FloatDnn floatDnn(model_path);
+  dnn::FloatDnn floatDnn(model_path);
 
-  dnn::BatchData batchData(input_path);
+  cout << "Network = ";
+  floatDnn.PrintTopology();
+
+  dnn::BatchData input(input_path);
+
+  cout << "Input   = " << input.vector_count() << "x" << input.dimension() << endl;
 
   dnn::QuantizedDnn qDnn(floatDnn, 3);
 
-  dnn::CalculationContext context(&qDnn, batchData.vector_count(), 8);
+  typedef std::chrono::high_resolution_clock Clock;
+  typedef std::chrono::milliseconds milliseconds;
+  Clock::time_point t0 = Clock::now();
 
-  dnn::BatchData *output = context.Calculate(batchData);
+  dnn::CalculationContext context(&qDnn, input.vector_count(), 8);
+
+  dnn::BatchData *output = context.Calculate(input);
+
+  Clock::time_point t1 = Clock::now();
+  milliseconds ms = std::chrono::duration_cast<milliseconds>(t1 - t0);
+
+  std::cout << "Dnn calculation time = " << ms.count() << " ms." << endl;
 
   if (output_path.size() == 0) {
     output->dump();
@@ -54,6 +76,7 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
+
 
 namespace dnn {
 
@@ -161,19 +184,6 @@ void dump(__m128 data) {
   float temp[4] __attribute((aligned(4 * 4)));
   _mm_store_ps(&temp[0], data);
   print_container(&temp, 4);
-}
-
-void CalculationContext::Test(const BatchData &input) {
-  typedef std::chrono::high_resolution_clock Clock;
-  typedef std::chrono::milliseconds milliseconds;
-
-  Clock::time_point t0 = Clock::now();
-  this->LastHiddenLayerActivations(input);
-  this->CalculateOutput();
-  Clock::time_point t1 = Clock::now();
-  milliseconds ms = std::chrono::duration_cast<milliseconds>(t1 - t0);
-
-  std::cout << "Elapsed:" << ms.count() << std::endl;
 }
 
 BatchData *CalculationContext::Calculate(const BatchData &input) {

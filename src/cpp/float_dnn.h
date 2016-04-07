@@ -222,6 +222,11 @@ class FloatDnn {
   float *shift() const { return shift_; }
   float *scale() const { return scale_; }
 
+  void PrintTopology() {
+    cout << input_layer()->input_dimension() << "-" << layers_.size() - 2 << "x"
+        << layers_[0]->node_count() << "-" << layers_[layers_.size() - 1]->node_count() << endl;
+  }
+
   ~FloatDnn() {
     for (FloatLayer *layer : layers_) {
       delete layer;

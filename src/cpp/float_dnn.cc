@@ -13,10 +13,6 @@ FloatDnn::FloatDnn(std::string fileName) {
 
   size_t layerCount = loader->load_size_t();
 
-#ifdef DEBUG
-  cout << "Layer count = " << layerCount << endl;
-#endif
-
   this->layers_ = std::vector<FloatLayer *>(layerCount);
   size_t actualInputDimension = 0;
 
@@ -30,14 +26,6 @@ FloatDnn::FloatDnn(std::string fileName) {
         j == 0 ? dnn::paddedSize(inputDimension, 4) : inputDimension;
     size_t outputDimension = loader->load_size_t();
 
-#ifdef DEBUG
-    cout << "Layer " << j << " input dimension = " << inputDimension << endl;
-    if (j == 0) {
-      cout << "Layer " << j << " padded input dimension = " << paddedInputDim
-          << endl;
-    }
-    cout << "Layer " << j << " output dimension = " << outputDimension << endl;
-#endif
     // load weights
     float **weights = new float *[outputDimension];
     for (size_t oo = 0; oo < outputDimension; oo++) {
@@ -183,7 +171,6 @@ void BatchData::dumpToFile(std::string fileName, bool binary) {
     if (!binary) {
       cout << endl;
     }
-
   }
   os.close();
 }
