@@ -1,4 +1,5 @@
 LIBRARY := libfast-dnn.so
+EXECUTABLE := fast-dnn
 PROJECT_HOME := ../..
 OBJFILES := dnn.o jni_dnn.o float_dnn.o
 JNI_HEADERS :=../../include/
@@ -8,3 +9,6 @@ CXXFLAGS := $(INCLUDES) -g -Wall -O2 -march=native -mtune=native -std=c++11 -fun
 $(LIBRARY): $(OBJFILES)
 	$(CXX) -shared -static-libstdc++ -o $@ $^
 	cp $@ $(PROJECT_HOME)/src/java/resources
+
+$(EXECUTABLE): $(OBJFILES)
+	$(CXX) -o $(EXECUTABLE) $^
