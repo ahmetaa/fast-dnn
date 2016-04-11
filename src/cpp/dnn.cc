@@ -94,7 +94,6 @@ static float inline quantizedNodeSum(const size_t vectorSize,
 
 const float WEIGHT_MULTIPLIER = 127;
 
-
 QuantizedSigmoid::QuantizedSigmoid() {
   int size = SIGMOID_LOOKUP_SIZE;
   this->lookup_ = new unsigned char[SIGMOID_LOOKUP_SIZE];
@@ -501,7 +500,7 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer, float cutof
   const size_t inputSimdVectorSize = floatLayer.input_dimension() / 16;
 
   // allocate SIMD registers for `char` valued weights. Total amount is
-  // nodecount*input dim.
+  // node_count*input dim.
   this->weights_ = dnn::SIMD_i_alloc(this->node_count_ * inputSimdVectorSize);
 
   __m128i *w = this->weights_;

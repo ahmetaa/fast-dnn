@@ -6,9 +6,15 @@ JNI_HEADERS :=../../include/
 INCLUDES := -I$(JNI_HEADERS)
 CXXFLAGS := $(INCLUDES) -g -Wall -O2 -march=native -mtune=native -std=c++11 -funroll-loops -msse4 -fPIC
 
-$(LIBRARY): $(OBJFILES)
-	$(CXX) -shared -static-libstdc++ -o $@ $^
-	cp $@ $(PROJECT_HOME)/src/java/resources
+all : $(EXECUTABLE) $(LIBRARY)
+
+clean :
+	rm -f $(OBJFILES) fast-dnn libfast-dnn.so
+	echo All Clean.
 
 $(EXECUTABLE): $(OBJFILES)
 	$(CXX) -o $(EXECUTABLE) $^
+
+$(LIBRARY): $(OBJFILES)
+	$(CXX) -shared -static-libstdc++ -o $@ $^
+	cp $@ $(PROJECT_HOME)/src/java/resources

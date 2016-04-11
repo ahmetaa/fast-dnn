@@ -16,7 +16,7 @@ import java.io.IOException;
  * <p>
  * Batch processing. Instead of calculating one input vector at a time, multiple vectors are calculated.
  * <p>
- * Lazy processing (Not yet implemented): In the last layer, not all outputs are required to be calculated.
+ * Lazy processing: In the last layer, not all outputs are required to be calculated.
  * So, only required outputs are calculated. This requires communication with the call side.
  * <p>
  */
@@ -91,7 +91,11 @@ public class QuantizedDnn {
     }
 
     public LazyContext getNewLazyContext(int inputVectorCount) {
-        long handle = getContext(nativeDnnHandle, inputVectorCount, 8);
+        return getNewLazyContext(inputVectorCount, 8);
+    }
+
+    public LazyContext getNewLazyContext(int inputVectorCount, int batchSize) {
+        long handle = getContext(nativeDnnHandle, inputVectorCount, batchSize);
         return new LazyContext(this, handle, inputVectorCount);
     }
 
