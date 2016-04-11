@@ -208,8 +208,6 @@ class CalculationContext {
 
   BatchData *CalculateOutput();
 
-  void Test(const BatchData &input);
-
   BatchData *Calculate(const BatchData &input);
 
   float *LazyOutputActivations(size_t inputIndex, const char *outputNodes);
