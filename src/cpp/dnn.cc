@@ -459,24 +459,6 @@ BatchData *CalculationContext::CalculateOutput() {
   return result;
 }
 
-void FloatSimdLayer::Validate() {
-  const size_t vectorInputSize = this->input_dimension_ / 4;
-
-  __m128 *w = weights_;
-  for (size_t i = 0; i < this->node_count_; ++i) {
-    for (size_t j = 0; j < vectorInputSize; ++j) {
-      float result[4];
-      _mm_store_ps(result, w[j]);
-      for (size_t k = 0; k < 4; k++) {
-        if (result[k] < -20 || result[k] > 20) {
-          cout << result[k] << endl;
-        }
-      }
-    }
-    w += vectorInputSize;
-  }
-}
-
 QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer, float cutoff) {
   this->node_count_ = floatLayer.node_count();
   this->input_dimension_ = floatLayer.input_dimension();

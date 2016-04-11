@@ -88,8 +88,6 @@ class FloatSimdLayer: public LayerBase {
 
   __m128 *weights() const { return weights_; }
 
-  void Validate();
-
   ~FloatSimdLayer() {
     aligned_free(weights_);
   }
@@ -158,7 +156,6 @@ class QuantizedDnn {
 class CalculationContext {
  private:
   QuantizedDnn *dnn_;
-  // BatchData *input;
 
   size_t input_count_;
 
