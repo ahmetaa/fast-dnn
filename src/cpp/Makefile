@@ -7,10 +7,11 @@ INCLUDES := -I$(JNI_HEADERS)
 CXXFLAGS := $(INCLUDES) -g -Wall -O2 -march=native -mtune=native -std=c++11 -funroll-loops -msse4 -fPIC
 
 all : $(EXECUTABLE) $(LIBRARY)
+	@echo $(EXECUTABLE) and $(LIBRARY) created.
 
 clean :
-	rm -f $(OBJFILES) fast-dnn libfast-dnn.so
-	echo All Clean.
+	rm -f $(OBJFILES) $(EXECUTABLE) $(LIBRARY)
+	@echo All Clean.
 
 $(EXECUTABLE): $(OBJFILES)
 	$(CXX) -o $(EXECUTABLE) $^
