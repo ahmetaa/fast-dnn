@@ -114,29 +114,13 @@ inline unsigned char sigmoid(float i) {
   return static_cast<unsigned char> (roundf(k * SIGMOID_QUANTIZATION_MULTIPLIER));
 }
 
-inline __m128 *SIMD_alloc(size_t simdBlockCount) {
-  return reinterpret_cast<__m128 *> (aligned_malloc(16, sizeof(__m128) * simdBlockCount));
-}
-
-inline __m128i *SIMD_i_alloc(size_t simdBlockCount) {
-  return reinterpret_cast<__m128i *> (aligned_malloc(16, sizeof(__m128i) * simdBlockCount));
-}
-
-inline char *byte_alloc(size_t count) {
-  return reinterpret_cast<char *> (aligned_malloc(16, sizeof(char) * count));
-}
-
-inline float *float_alloc(size_t count) {
-  return reinterpret_cast<float *> (aligned_malloc(16, sizeof(float) * count));
-}
-
 FloatSimdLayer::FloatSimdLayer(const FloatLayer *float_layer) {
   this->node_count_ = float_layer->node_count();
   this->input_dimension_ = float_layer->input_dimension();
 
   const size_t simdVectorDim = this->input_dimension_ / 4;
 
-  this->weights_ = dnn::SIMD_alloc(this->node_count_ * simdVectorDim);
+  this->weights_ = dnn::SIMD_alloc<__m128>(this->node_count_ * simdVectorDim);
 
   __m128 *w = this->weights_;
 
@@ -157,7 +141,7 @@ FloatSimdLayer::FloatSimdLayer(const FloatLayer *float_layer) {
 
 __m128 *getSimdFloat(const float *values, size_t dim) {
   size_t k = dim / 4;
-  __m128 *result = dnn::SIMD_alloc(k);
+  __m128 *result = dnn::SIMD_alloc<__m128>(k);
 
   for (size_t i = 0; i < k; ++i) {
     result[i] = _mm_load_ps(&values[i * 4]);
@@ -216,15 +200,14 @@ CalculationContext::CalculationContext(QuantizedDnn *dnn,
   this->input_count_ = input_count;
 
   // allocate for float activations. Only batch amount.
-  this->activations_ = dnn::float_alloc(this->hidden_node_count_ * batch_size);
+  this->activations_ = dnn::SIMD_alloc<float>(this->hidden_node_count_ * batch_size);
 
   // allocate for quantized unsigned char input values.
-  this->quantized_activations_ =
-      reinterpret_cast<unsigned char *> (dnn::byte_alloc(this->hidden_node_count_ * input_count));
+  this->quantized_activations_ = dnn::SIMD_alloc<unsigned char>(this->hidden_node_count_ * input_count);
 
   this->soft_max_ = new SoftMax(dnn->output_dimension());
 
-  this->single_output_ = dnn::float_alloc(dnn->output_dimension());
+  this->single_output_ = dnn::SIMD_alloc<float>(dnn->output_dimension());
 
 }
 
@@ -428,7 +411,7 @@ void CalculationContext::LastHiddenLayerActivations(const BatchData &input) {
 BatchData *CalculationContext::CalculateOutput() {
   // allocate for output.
   const size_t outSize = this->dnn_->output_dimension();
-  float *outputs = dnn::float_alloc(this->input_count_ * outSize);
+  float *outputs = dnn::SIMD_alloc<float>(this->input_count_ * outSize);
 
   // calculate in batches.
   for (size_t i = 0; i < this->input_count_; i += batch_size_) {
@@ -477,14 +460,14 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer, float cutof
 
   // allocate SIMD registers for `char` valued weights. Total amount is
   // node_count*input dim.
-  this->weights_ = dnn::SIMD_i_alloc(this->node_count_ * inputSimdVectorSize);
+  this->weights_ = dnn::SIMD_alloc<__m128i>(this->node_count_ * inputSimdVectorSize);
 
   __m128i *w = this->weights_;
   // for each node
   for (size_t i = 0; i < this->node_count_; i++) {
     char *quantizedWeights;
     // align allocated memory for quantized Weights.
-    quantizedWeights = dnn::byte_alloc(floatLayer.input_dimension());
+    quantizedWeights = dnn::SIMD_alloc<char>(floatLayer.input_dimension());
 
     // 8 bit weight quantization
     for (size_t k = 0; k < floatLayer.input_dimension(); ++k) {

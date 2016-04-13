@@ -36,6 +36,11 @@ inline void aligned_free(void *ptr) {
 #endif
 }
 
+template <typename T>
+inline T *SIMD_alloc(size_t simdBlockCount) {
+  return reinterpret_cast<T *> (aligned_malloc(16, sizeof(T) * simdBlockCount));
+}
+
 static const float SIGMOID_QUANTIZATION_MULTIPLIER = 255.0f;
 static const unsigned char SIGMOID_QUANTIZATION_MULTIPLIER_UCHAR = 255;
 
