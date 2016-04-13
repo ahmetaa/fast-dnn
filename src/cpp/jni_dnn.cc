@@ -67,7 +67,7 @@ JNIEXPORT void JNICALL Java_suskun_nn_QuantizedDnn_calculateUntilOutput(
   const dnn::BatchData batchData(env->GetFloatArrayElements(input, 0),
                                  context->input_count(),
                                  context->dnn()->input_dimension());
-  context->LastHiddenLayerActivations(batchData);
+  context->CalculateUntilLastHiddenLayer(batchData);
 }
 
 JNIEXPORT jfloatArray JNICALL

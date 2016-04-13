@@ -189,7 +189,7 @@ class CalculationContext {
       size_t input_count,
       size_t batch_size);
 
-  void LastHiddenLayerActivations(const BatchData &input);
+  void CalculateUntilLastHiddenLayer(const BatchData &input);
 
   void QuantizedLayerActivations(
       const QuantizedSimdLayer &layer,

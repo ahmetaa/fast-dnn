@@ -77,30 +77,29 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-
 namespace dnn {
 
 static QuantizedSigmoid *qSigmoid = new QuantizedSigmoid();
 
 __m128 *getSimdFloat(const float *values, size_t dim);
 
-static inline float horizontalSum(__m128 x);
+inline float horizontalSum(__m128 x);
 
-static inline int horizontalSum(__m128i x);
+inline int horizontalSum(__m128i x);
 
-static float inline quantizedNodeSum(const size_t vectorSize,
-                                     const unsigned char *quantizedInput,
-                                     const __m128i *weights);
+inline float quantizedNodeSum(const size_t vectorSize,
+                              const unsigned char *quantizedInput,
+                              const __m128i *weights);
 
 const float WEIGHT_MULTIPLIER = 127;
 
 QuantizedSigmoid::QuantizedSigmoid() {
-  int size = SIGMOID_LOOKUP_SIZE;
-  this->lookup_ = new unsigned char[SIGMOID_LOOKUP_SIZE];
+  int size = dnn::SIGMOID_LOOKUP_SIZE;
+  this->lookup_ = new unsigned char[dnn::SIGMOID_LOOKUP_SIZE];
 
   // when a sigmoid is quantized with 255, numbers below around -5.4 becomes 0,
   // numbers over around +5.4 becomes 254
-  for (int i = -SIGMOID_HALF_LOOKUP_SIZE; i < SIGMOID_HALF_LOOKUP_SIZE; ++i) {
+  for (int i = -dnn::SIGMOID_HALF_LOOKUP_SIZE; i < dnn::SIGMOID_HALF_LOOKUP_SIZE; ++i) {
     float k = i / 100.0f;
     float sigmoid = 1.0f / (1 + expf(-k));
     unsigned char q =
@@ -111,7 +110,7 @@ QuantizedSigmoid::QuantizedSigmoid() {
 
 inline unsigned char sigmoid(float i) {
   float k = 1.0f / (1.0f + expf(-i));
-  return static_cast<unsigned char> (roundf(k * SIGMOID_QUANTIZATION_MULTIPLIER));
+  return static_cast<unsigned char> (roundf(k * dnn::SIGMOID_QUANTIZATION_MULTIPLIER));
 }
 
 FloatSimdLayer::FloatSimdLayer(const FloatLayer *float_layer) {
@@ -139,6 +138,7 @@ FloatSimdLayer::FloatSimdLayer(const FloatLayer *float_layer) {
             this->bias_);
 }
 
+//
 __m128 *getSimdFloat(const float *values, size_t dim) {
   size_t k = dim / 4;
   __m128 *result = dnn::SIMD_alloc<__m128>(k);
@@ -149,6 +149,8 @@ __m128 *getSimdFloat(const float *values, size_t dim) {
   return result;
 }
 
+// finds the maximum absolute value in [floats].
+// if values are outside of trimMin and trimMax, they are trimmed.
 float absMax(float *floats, size_t size, float trimMin, float trimMax) {
   float max = -numeric_limits<float>::max();
   for (size_t i = 0; i < size; i++) {
@@ -164,18 +166,20 @@ float absMax(float *floats, size_t size, float trimMin, float trimMax) {
 }
 
 BatchData *CalculationContext::Calculate(const BatchData &input) {
-  this->LastHiddenLayerActivations(input);
+  this->CalculateUntilLastHiddenLayer(input);
   return CalculateOutput();
 }
 
-static inline float horizontalSum(__m128 x) {
+// calculates sum of 4 32 bit float values in a SIMD register.
+inline float horizontalSum(__m128 x) {
   x = _mm_hadd_ps(x, x);
   x = _mm_hadd_ps(x, x);
   return _mm_cvtss_f32(x);
 }
 
+// applies shift and scale operations to input values.
 void QuantizedDnn::ApplyShiftAndScale(const BatchData &batchInput) {
-  // apply shift and scale with SIMD
+
   const size_t size = batchInput.dimension() / 4;
 
   float *input = batchInput.data();
@@ -191,6 +195,7 @@ void QuantizedDnn::ApplyShiftAndScale(const BatchData &batchInput) {
   }
 }
 
+
 CalculationContext::CalculationContext(QuantizedDnn *dnn,
                                        size_t input_count,
                                        size_t batch_size) {
@@ -205,12 +210,15 @@ CalculationContext::CalculationContext(QuantizedDnn *dnn,
   // allocate for quantized unsigned char input values.
   this->quantized_activations_ = dnn::SIMD_alloc<unsigned char>(this->hidden_node_count_ * input_count);
 
+  // softmax calculations are stateful. therefore we need one for each calculation context.
   this->soft_max_ = new SoftMax(dnn->output_dimension());
 
   this->single_output_ = dnn::SIMD_alloc<float>(dnn->output_dimension());
 
 }
 
+// This calculates initial layer activation values. Quantization is not applied in the first layer
+// because input's dynamic range can be large.
 void CalculationContext::InputActivations(const BatchData &inputData,
                                           size_t batch_index) {
   const size_t dimension = this->dnn_->input_dimension();
@@ -241,6 +249,7 @@ void CalculationContext::InputActivations(const BatchData &inputData,
   }
 }
 
+// Bias values are not quantized and addition is also not vectorized for simplicity.
 void CalculationContext::AddBias(const float *bias) {
 
   float *ac = this->activations_;
@@ -255,6 +264,7 @@ void CalculationContext::AddBias(const float *bias) {
   }
 }
 
+// applies sigmoid operation to activation values.
 void CalculationContext::QuantizedSigmoid(size_t batch_index) {
   // start of the quantized activations.
   unsigned char *qStart =
@@ -308,9 +318,12 @@ void CalculationContext::QuantizedLayerActivations(const QuantizedSimdLayer &lay
   }
 }
 
-static float inline quantizedNodeSum(const size_t vectorSize,
-                                     const unsigned char *quantizedInput,
-                                     const __m128i *weights) {
+// here quantized SIMD multiplication and summation is applied to quantizedInput and weights.
+// sum = i1*w1 + i2*w2 + .... +
+
+inline float quantizedNodeSum(const size_t vectorSize,
+                              const unsigned char *quantizedInput,
+                              const __m128i *weights) {
   // set sum to 0
   __m128i sum = _mm_setzero_si128();
 
@@ -333,11 +346,10 @@ static float inline quantizedNodeSum(const size_t vectorSize,
   return dnn::horizontalSum(sum);
 }
 
-/* Calculates activations for a set of output nodes against a single
-* input vector.
-* Output node set is usually a small amount for speech recognition
-* applications.
-*/
+// Calculates activations for a set of output nodes against a single
+// input vector.
+// Output node set is usually a small amount for speech recognition
+// applications.
 float *CalculationContext::LazyOutputActivations(size_t inputIndex,
                                                  const char *outputNodes) {
   // we do this only for output.
@@ -378,13 +390,15 @@ float *CalculationContext::LazyOutputActivations(size_t inputIndex,
   return result;
 }
 
-static inline int horizontalSum(__m128i x) {
+// sums all 32 bit integer values in a SIMD register.
+inline int horizontalSum(__m128i x) {
   x = _mm_hadd_epi32(x, x);
   x = _mm_hadd_epi32(x, x);
   return _mm_extract_epi32(x, 0);
 }
 
-void CalculationContext::LastHiddenLayerActivations(const BatchData &input) {
+// makes forward activation calculations until the last hidden layer.
+void CalculationContext::CalculateUntilLastHiddenLayer(const BatchData &input) {
   this->dnn_->ApplyShiftAndScale(input);
 
   const size_t frameCount = input.vector_count();
@@ -408,6 +422,8 @@ void CalculationContext::LastHiddenLayerActivations(const BatchData &input) {
   }
 }
 
+// calculates output soft-max values. Before calling this method,
+// [CalculateUntilLastHiddenLayer] should be called.
 BatchData *CalculationContext::CalculateOutput() {
   // allocate for output.
   const size_t outSize = this->dnn_->output_dimension();
@@ -435,6 +451,9 @@ BatchData *CalculationContext::CalculateOutput() {
 
   return result;
 }
+
+// generates a quantized layer from a float values layer.
+// if a weight value is higher than cutoff value or less than -cutoff value, they are trimmed.
 
 QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer, float cutoff) {
   this->node_count_ = floatLayer.node_count();
@@ -511,6 +530,7 @@ QuantizedDnn::QuantizedDnn(const FloatDnn &floatDnn, float cutoff) {
   this->scale_ = dnn::getSimdFloat(floatDnn.scale(), floatDnn.input_dimension());
 }
 
+// applies soft-max to an array of values.
 void SoftMax::apply(float *input) {
   float total = 0;
   for (size_t i = 0; i < this->size_; ++i) {
