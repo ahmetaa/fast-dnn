@@ -16,8 +16,6 @@
 #ifndef DNN_DNN_H
 #define DNN_DNN_H
 
-using namespace std;
-
 namespace dnn {
 
 inline void *aligned_malloc(size_t align, size_t size) {

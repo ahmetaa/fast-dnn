@@ -4,6 +4,8 @@
 #include <chrono>
 #include <fstream>
 
+using namespace std;
+
 namespace dnn {
 
 size_t paddedSize(size_t num, size_t div);
@@ -83,12 +85,12 @@ BinaryLoader::BinaryLoader(const std::string fileName, bool littleEndian) {
 
   // allocate memory to contain the whole file:
   this->content_ = new char[lSize];
-  this->length_ = (int) lSize;
+  this->length_ = static_cast<int> (lSize);
   this->little_endian_ = littleEndian;
 
   // copy the file into the buffer:
   size_t result = fread(this->content_, 1, (size_t) lSize, pFile);
-  if ((long) result != lSize) {
+  if (static_cast<long> (result) != lSize) {
     fputs("Reading error", stderr);
     exit(3);
   }

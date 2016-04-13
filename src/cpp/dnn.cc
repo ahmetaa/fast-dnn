@@ -84,9 +84,9 @@ static QuantizedSigmoid *qSigmoid = new QuantizedSigmoid();
 
 __m128 *getSimdFloat(const float *values, size_t dim);
 
-static inline float __horizontalSumFloat32(__m128 x);
+static inline float horizontalSum(__m128 x);
 
-static inline int __horizontalSumInt32(__m128i x);
+static inline int horizontalSum(__m128i x);
 
 static float inline quantizedNodeSum(const size_t vectorSize,
                                      const unsigned char *quantizedInput,
@@ -104,30 +104,30 @@ QuantizedSigmoid::QuantizedSigmoid() {
     float k = i / 100.0f;
     float sigmoid = 1.0f / (1 + expf(-k));
     unsigned char q =
-        (unsigned char) roundf(sigmoid * dnn::SIGMOID_QUANTIZATION_MULTIPLIER);
+        static_cast<unsigned char> (roundf(sigmoid * dnn::SIGMOID_QUANTIZATION_MULTIPLIER));
     lookup_[i + size / 2] = q;
   }
 }
 
 inline unsigned char sigmoid(float i) {
   float k = 1.0f / (1.0f + expf(-i));
-  return (unsigned char) (roundf(k * SIGMOID_QUANTIZATION_MULTIPLIER));
+  return static_cast<unsigned char> (roundf(k * SIGMOID_QUANTIZATION_MULTIPLIER));
 }
 
 inline __m128 *SIMD_alloc(size_t simdBlockCount) {
-  return (__m128 *) aligned_malloc(16, sizeof(__m128) * simdBlockCount);
+  return reinterpret_cast<__m128 *> (aligned_malloc(16, sizeof(__m128) * simdBlockCount));
 }
 
 inline __m128i *SIMD_i_alloc(size_t simdBlockCount) {
-  return (__m128i *) aligned_malloc(16, sizeof(__m128i) * simdBlockCount);
+  return reinterpret_cast<__m128i *> (aligned_malloc(16, sizeof(__m128i) * simdBlockCount));
 }
 
 inline char *byte_alloc(size_t count) {
-  return (char *) aligned_malloc(16, sizeof(char) * count);
+  return reinterpret_cast<char *> (aligned_malloc(16, sizeof(char) * count));
 }
 
 inline float *float_alloc(size_t count) {
-  return (float *) aligned_malloc(16, sizeof(float) * count);
+  return reinterpret_cast<float *> (aligned_malloc(16, sizeof(float) * count));
 }
 
 FloatSimdLayer::FloatSimdLayer(const FloatLayer *float_layer) {
@@ -171,7 +171,7 @@ float absMax(float *floats, size_t size, float trimMin, float trimMax) {
     float f = floats[i];
     if (f < trimMin) f = trimMin;
     if (f > trimMax) f = trimMax;
-    float fAbs = (float) fabs(f);
+    float fAbs = static_cast<float> (fabs(f));
     if (fAbs > max) {
       max = fAbs;
     }
@@ -179,18 +179,12 @@ float absMax(float *floats, size_t size, float trimMin, float trimMax) {
   return max;
 }
 
-void dump(__m128 data) {
-  float temp[4] __attribute((aligned(4 * 4)));
-  _mm_store_ps(&temp[0], data);
-  print_container(&temp, 4);
-}
-
 BatchData *CalculationContext::Calculate(const BatchData &input) {
   this->LastHiddenLayerActivations(input);
   return CalculateOutput();
 }
 
-static inline float __horizontalSumFloat32(__m128 x) {
+static inline float horizontalSum(__m128 x) {
   x = _mm_hadd_ps(x, x);
   x = _mm_hadd_ps(x, x);
   return _mm_cvtss_f32(x);
@@ -226,7 +220,7 @@ CalculationContext::CalculationContext(QuantizedDnn *dnn,
 
   // allocate for quantized unsigned char input values.
   this->quantized_activations_ =
-      (unsigned char *) dnn::byte_alloc(this->hidden_node_count_ * input_count);
+      reinterpret_cast<unsigned char *> (dnn::byte_alloc(this->hidden_node_count_ * input_count));
 
   this->soft_max_ = new SoftMax(dnn->output_dimension());
 
@@ -256,7 +250,7 @@ void CalculationContext::InputActivations(const BatchData &inputData,
         sum = _mm_add_ps(sum, mul);
       }
       this->activations_[j * this->hidden_node_count_ + i] =
-          dnn::__horizontalSumFloat32(sum);
+          dnn::horizontalSum(sum);
       // advance to next input vector.
       input += dimension;
     }
@@ -353,7 +347,7 @@ static float inline quantizedNodeSum(const size_t vectorSize,
     // add them to sum.
     sum = _mm_add_epi32(_mm_add_epi32(lo, hi), sum);
   }
-  return dnn::__horizontalSumInt32(sum);
+  return dnn::horizontalSum(sum);
 }
 
 /* Calculates activations for a set of output nodes against a single
@@ -401,7 +395,7 @@ float *CalculationContext::LazyOutputActivations(size_t inputIndex,
   return result;
 }
 
-static inline int __horizontalSumInt32(__m128i x) {
+static inline int horizontalSum(__m128i x) {
   x = _mm_hadd_epi32(x, x);
   x = _mm_hadd_epi32(x, x);
   return _mm_extract_epi32(x, 0);
@@ -506,7 +500,7 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer, float cutof
 
     // transfer char values and load to SIMD.
     for (size_t k = 0; k < inputSimdVectorSize; ++k) {
-      w[k] = _mm_load_si128((const __m128i *) &quantizedWeights[k * 16]);
+      w[k] = _mm_load_si128(reinterpret_cast<const __m128i *> (&quantizedWeights[k * 16]));
     }
     w += inputSimdVectorSize;
   }
@@ -521,7 +515,7 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer, float cutof
 QuantizedDnn::QuantizedDnn(const FloatDnn &floatDnn, float cutoff) {
   this->input_layer_ = new FloatSimdLayer(floatDnn.input_layer());
   this->layers_ = std::vector<QuantizedSimdLayer *>();
-  this->layers_.reserve((unsigned long) (floatDnn.layer_count() - 1));
+  this->layers_.reserve(static_cast<unsigned long> (floatDnn.layer_count() - 1));
 
   for (size_t i = 1; i < floatDnn.layer_count(); i++) {
     dnn::QuantizedSimdLayer *layer =

@@ -11,37 +11,7 @@
 #include <iostream>
 #include <string.h>
 
-using namespace std;
-
 namespace dnn {
-
-template<typename T>
-void print_container(const T &c, int amount) {
-  cout << "[";
-  bool isFirst = true;
-  for (int i = 0; i < amount; ++i) {
-    if (isFirst)
-      isFirst = false;
-    else
-      cout << ", ";
-    cout << c[i];
-  }
-  cout << "]" << endl;
-}
-
-template<typename T>
-void print_int(const T &c, int amount) {
-  cout << "[";
-  bool isFirst = true;
-  for (int i = 0; i < amount; ++i) {
-    if (isFirst)
-      isFirst = false;
-    else
-      cout << ", ";
-    cout << (int) c[i];
-  }
-  cout << "]" << endl;
-}
 
 /*
  * This class actually holds a float32 matrix with [dimension] columns and
@@ -223,8 +193,8 @@ class FloatDnn {
   float *scale() const { return scale_; }
 
   void PrintTopology() {
-    cout << input_layer()->input_dimension() << "-" << layers_.size() - 2 << "x"
-        << layers_[0]->node_count() << "-" << layers_[layers_.size() - 1]->node_count() << endl;
+    std::cout << input_layer()->input_dimension() << "-" << layers_.size() - 2 << "x"
+        << layers_[0]->node_count() << "-" << layers_[layers_.size() - 1]->node_count() << std::endl;
   }
 
   ~FloatDnn() {
