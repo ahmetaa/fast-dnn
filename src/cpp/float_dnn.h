@@ -97,26 +97,7 @@ class BinaryLoader {
 
  private:
 
-  // loads 4 byte content, converts to little endian representation if necessary.
-  // resulting byte array is [size] bytes. [size] can only be 4 or 8 bytes.
-  char *loadFourBytes(int size) {
-    assert(offset_ < length_);
-    assert(size >= 4 || size == 8);
-
-    char *bytes = size == 4 ? four_bytes_ : eight_bytes_;
-    std::fill(bytes, bytes + size, 0);
-
-    for (size_t i = 0; i < 4; ++i) {
-      char c = content_[offset_ + i];
-      if (little_endian_) {
-        bytes[i] = content_[offset_ + i];
-      } else {
-        bytes[3 - i] = c;
-      }
-    }
-    offset_ = offset_ + 4;
-    return bytes;
-  }
+  char *loadFourBytes(int size);
 
 };
 
@@ -192,10 +173,7 @@ class FloatDnn {
   float *shift() const { return shift_; }
   float *scale() const { return scale_; }
 
-  void PrintTopology() {
-    std::cout << input_layer()->input_dimension() << "-" << layers_.size() - 2 << "x"
-        << layers_[0]->node_count() << "-" << layers_[layers_.size() - 1]->node_count() << std::endl;
-  }
+  void PrintTopology();
 
   ~FloatDnn() {
     for (FloatLayer *layer : layers_) {

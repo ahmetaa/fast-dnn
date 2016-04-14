@@ -37,8 +37,8 @@ inline void aligned_free(void *ptr) {
 }
 
 template <typename T>
-inline T *SIMD_alloc(size_t simdBlockCount) {
-  return reinterpret_cast<T *> (aligned_malloc(16, sizeof(T) * simdBlockCount));
+inline T *SIMD_alloc(size_t count) {
+  return reinterpret_cast<T *> (aligned_malloc(16, sizeof(T) * count));
 }
 
 static const float SIGMOID_QUANTIZATION_MULTIPLIER = 255.0f;
@@ -55,7 +55,7 @@ class QuantizedSigmoid {
   QuantizedSigmoid();
 
   unsigned char get(float input) {
-    int k = (int) roundf(input * 100);
+    int k = static_cast<int> (roundf(input * 100));
     if (k <= -SIGMOID_HALF_LOOKUP_SIZE) return 0;
     if (k >= SIGMOID_HALF_LOOKUP_SIZE)
       return dnn::SIGMOID_QUANTIZATION_MULTIPLIER_UCHAR;
