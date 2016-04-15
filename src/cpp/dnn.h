@@ -36,7 +36,7 @@ inline void aligned_free(void *ptr) {
 #endif
 }
 
-template <typename T>
+template<typename T>
 inline T *SIMD_alloc(size_t count) {
   return reinterpret_cast<T *> (aligned_malloc(16, sizeof(T) * count));
 }
@@ -48,8 +48,6 @@ static const int SIGMOID_LOOKUP_SIZE = 1280; // arbitrary 64*28
 static const int SIGMOID_HALF_LOOKUP_SIZE = SIGMOID_LOOKUP_SIZE / 2;
 
 class QuantizedSigmoid {
- private :
-  unsigned char *lookup_;
 
  public:
   QuantizedSigmoid();
@@ -57,16 +55,17 @@ class QuantizedSigmoid {
   unsigned char get(float input) {
     int k = static_cast<int> (roundf(input * 100));
     if (k <= -SIGMOID_HALF_LOOKUP_SIZE) return 0;
-    if (k >= SIGMOID_HALF_LOOKUP_SIZE)
+    if (k >= SIGMOID_HALF_LOOKUP_SIZE) {
       return dnn::SIGMOID_QUANTIZATION_MULTIPLIER_UCHAR;
+    }
     return lookup_[k + dnn::SIGMOID_HALF_LOOKUP_SIZE];
   }
+
+ private :
+  unsigned char *lookup_;
 };
 
 class SoftMax {
- private:
-  float *exp_array_;
-  size_t size_;
 
  public:
   SoftMax(size_t size) : size_(size) {
@@ -76,13 +75,15 @@ class SoftMax {
   void apply(float *input);
 
   ~SoftMax() { delete[] exp_array_; }
+
+ private:
+  float *exp_array_;
+  size_t size_;
+
 };
 
 // Layer for SIMD Float Dnn. Used in input layer because we do not quantize input values.
 class FloatSimdLayer: public LayerBase {
-
- private :
-  __m128 *weights_;
 
  public:
   FloatSimdLayer() { };
@@ -94,14 +95,13 @@ class FloatSimdLayer: public LayerBase {
   ~FloatSimdLayer() {
     aligned_free(weights_);
   }
+
+ private :
+  __m128 *weights_;
 };
 
 // Layer for Quantized DNN
 class QuantizedSimdLayer: public LayerBase {
-
- private:
-  __m128i *weights_;
-  float multiplier_;
 
  public:
 
@@ -115,18 +115,14 @@ class QuantizedSimdLayer: public LayerBase {
     aligned_free(weights_);
   }
 
+ private:
+  __m128i *weights_;
+  float multiplier_;
+
 };
 
 // DNN with quantized SIMD layers. Only the input layer is not quantized.
 class QuantizedDnn {
-
- private:
-
-  FloatSimdLayer *input_layer_;
-  std::vector<QuantizedSimdLayer *> layers_;
-  QuantizedSimdLayer *output_layer_;
-  __m128 *shift_;
-  __m128 *scale_;
 
  public:
 
@@ -154,33 +150,17 @@ class QuantizedDnn {
     aligned_free(shift_);
     aligned_free(scale_);
   }
+
+ private:
+
+  FloatSimdLayer *input_layer_;
+  std::vector<QuantizedSimdLayer *> layers_;
+  QuantizedSimdLayer *output_layer_;
+  __m128 *shift_;
+  __m128 *scale_;
 };
 
 class CalculationContext {
- private:
-  QuantizedDnn *dnn_;
-
-  size_t input_count_;
-
-  // represents the amount of input vectors that outputs will be calculated in
-  // one pass.
-  size_t batch_size_;
-
-  // hidden layer node counts
-  size_t hidden_node_count_;
-
-  // quantized inputs. This is used in all layers except input layer. This is
-  // actually a two dimensional matrix.
-  unsigned char *quantized_activations_;
-
-  // represents the buffer amount of float activations as the result of weight
-  // input matrix multiplication and addition of bias.
-  // this is actually a flattened two dimensional array.
-  float *activations_;
-
-  float *single_output_;
-
-  SoftMax *soft_max_;
 
  public:
 
@@ -218,6 +198,31 @@ class CalculationContext {
     delete soft_max_;
     delete single_output_;
   }
+
+ private:
+  QuantizedDnn *dnn_;
+
+  size_t input_count_;
+
+  // represents the amount of input vectors that outputs will be calculated in
+  // one pass.
+  size_t batch_size_;
+
+  // hidden layer node counts
+  size_t hidden_node_count_;
+
+  // quantized inputs. This is used in all layers except input layer. This is
+  // actually a two dimensional matrix.
+  unsigned char *quantized_activations_;
+
+  // represents the buffer amount of float activations as the result of weight
+  // input matrix multiplication and addition of bias.
+  // this is actually a flattened two dimensional array.
+  float *activations_;
+
+  float *single_output_;
+
+  SoftMax *soft_max_;
 };
 }
 #endif  // DNN_DNN_H

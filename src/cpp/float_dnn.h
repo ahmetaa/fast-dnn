@@ -20,12 +20,6 @@ namespace dnn {
  */
 class BatchData {
 
- private:
-
-  float *data_;
-  size_t dimension_;
-  size_t vector_count_;
-
  public:
 
   BatchData(std::string fileName);
@@ -42,6 +36,13 @@ class BatchData {
   void dumpToFile(std::string fileName, bool binary);
 
   ~BatchData() { delete data_; }
+
+ private:
+
+  float *data_;
+  size_t dimension_;
+  size_t vector_count_;
+
 };
 
 /* A simple class for loading binary data from a file. It can load little/big
@@ -49,13 +50,6 @@ class BatchData {
  * This class contains an offset pointer so it is stateful.
  */
 class BinaryLoader {
- private:
-  char *content_;
-  int offset_ = 0;
-  int length_;
-  bool little_endian_;
-  char *four_bytes_;
-  char *eight_bytes_;
 
  public:
 
@@ -96,20 +90,19 @@ class BinaryLoader {
   }
 
  private:
+  char *content_;
+  int offset_ = 0;
+  int length_;
+  bool little_endian_;
+  char *four_bytes_;
+  char *eight_bytes_;
 
+ private:
   char *loadFourBytes(int size);
 
 };
 
 class LayerBase {
-
- protected:
-  float *bias_;
-  size_t input_dimension_;
-  size_t node_count_;
-
-  LayerBase() { };
-
 
  public:
   LayerBase(float *bias_, size_t input_dimension_, size_t node_count_)
@@ -126,12 +119,17 @@ class LayerBase {
     delete bias_;
   }
 
+ protected:
+  float *bias_;
+  size_t input_dimension_;
+  size_t node_count_;
+
+  LayerBase() { };
+
 };
 
 // Layer for FloatDnn
 class FloatLayer: public LayerBase {
- private:
-  float **weights_;
 
  public:
   FloatLayer() { };
@@ -144,16 +142,14 @@ class FloatLayer: public LayerBase {
   ~FloatLayer() {
     delete[] weights_;
   }
+
+ private:
+  float **weights_;
+
 };
 
 // DNN with 32 bit floating numbers. This is only used for constructing a QuantizedDnn.
 class FloatDnn {
-
- private:
-  FloatLayer *input_layer_;
-  std::vector<FloatLayer *> layers_;
-  float *shift_;
-  float *scale_;
 
  public:
   FloatDnn(std::string fileName);
@@ -182,6 +178,12 @@ class FloatDnn {
     delete shift_;
     delete scale_;
   }
+
+ private:
+  FloatLayer *input_layer_;
+  std::vector<FloatLayer *> layers_;
+  float *shift_;
+  float *scale_;
 };
 }
 
