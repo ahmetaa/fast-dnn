@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 
 namespace dnn {
 
-static QuantizedSigmoid *qSigmoid = new QuantizedSigmoid();
+QuantizedSigmoid *qSigmoid = new QuantizedSigmoid();
 
 __m128 *getSimdFloat(const float *values, size_t dim);
 

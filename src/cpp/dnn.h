@@ -41,11 +41,11 @@ inline T *SIMD_alloc(size_t count) {
   return reinterpret_cast<T *> (aligned_malloc(16, sizeof(T) * count));
 }
 
-static const float SIGMOID_QUANTIZATION_MULTIPLIER = 255.0f;
-static const unsigned char SIGMOID_QUANTIZATION_MULTIPLIER_UCHAR = 255;
+const float SIGMOID_QUANTIZATION_MULTIPLIER = 255.0f;
+const unsigned char SIGMOID_QUANTIZATION_MULTIPLIER_UCHAR = 255;
 
-static const int SIGMOID_LOOKUP_SIZE = 1280; // arbitrary 64*28
-static const int SIGMOID_HALF_LOOKUP_SIZE = SIGMOID_LOOKUP_SIZE / 2;
+const int SIGMOID_LOOKUP_SIZE = 1280; // arbitrary 64*28
+const int SIGMOID_HALF_LOOKUP_SIZE = SIGMOID_LOOKUP_SIZE / 2;
 
 class QuantizedSigmoid {
 
