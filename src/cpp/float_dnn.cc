@@ -142,7 +142,7 @@ void BatchData::dumpToFile(std::string fileName, bool binary) {
       if (binary) {
         os.write(reinterpret_cast<const char *>(p), sizeof(float));
       } else {
-        os << printf("%f", *p);
+        os << *p;
       }
       if (!binary && (j < dimension_ - 1)) {
         os << " ";
@@ -150,7 +150,7 @@ void BatchData::dumpToFile(std::string fileName, bool binary) {
       p++;
     }
     if (!binary) {
-      cout << endl;
+      os << endl;
     }
   }
   os.close();
