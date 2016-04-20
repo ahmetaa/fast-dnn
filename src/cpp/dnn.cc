@@ -16,7 +16,8 @@ using namespace std;
 int main(int argc, char *argv[]) {
   if (argc < 3) {
     cout << "At least two parameters are required. "
-        "[model-path] [binary-input-path] Optional[out-path] Optional[out-type BIN|TXT]" << endl;
+        "[model-path] [binary-input-path] Optional[out-path] Optional[out-type BIN|TXT]"
+        << endl;
     return -1;
   }
   std::vector<std::string> params(argv, argv + argc);
@@ -49,7 +50,8 @@ int main(int argc, char *argv[]) {
 
   dnn::BatchData input(input_path);
 
-  cout << "Input   = " << input.vector_count() << "x" << input.dimension() << endl;
+  cout << "Input   = " << input.vector_count() << "x" << input.dimension()
+      << endl;
 
   dnn::QuantizedDnn qDnn(floatDnn, 3);
 
@@ -99,25 +101,29 @@ QuantizedSigmoid::QuantizedSigmoid() {
 
   // when a sigmoid is quantized with 255, numbers below around -5.4 becomes 0,
   // numbers over around +5.4 becomes 254
-  for (int i = -dnn::SIGMOID_HALF_LOOKUP_SIZE; i < dnn::SIGMOID_HALF_LOOKUP_SIZE; ++i) {
+  for (int i = -dnn::SIGMOID_HALF_LOOKUP_SIZE;
+       i < dnn::SIGMOID_HALF_LOOKUP_SIZE; ++i) {
     float k = i / 100.0f;
     float sigmoid = 1.0f / (1 + expf(-k));
     unsigned char q =
-        static_cast<unsigned char> (roundf(sigmoid * dnn::SIGMOID_QUANTIZATION_MULTIPLIER));
+        static_cast<unsigned char> (roundf(
+            sigmoid * dnn::SIGMOID_QUANTIZATION_MULTIPLIER));
     lookup_[i + size / 2] = q;
   }
 }
 
 inline unsigned char sigmoid(float i) {
   float k = 1.0f / (1.0f + expf(-i));
-  return static_cast<unsigned char> (roundf(k * dnn::SIGMOID_QUANTIZATION_MULTIPLIER));
+  return static_cast<unsigned char> (roundf(
+      k * dnn::SIGMOID_QUANTIZATION_MULTIPLIER));
 }
 
 FloatSimdLayer::FloatSimdLayer(const FloatLayer *float_layer) {
   this->node_count_ = float_layer->node_count();
   this->input_dimension_ = float_layer->input_dimension();
 
-  this->weights_ = dnn::AlignedAlloc<float>(this->node_count_ * this->input_dimension_);
+  this->weights_ =
+      dnn::AlignedAlloc<float>(this->node_count_ * this->input_dimension_);
 
   float *w = this->weights_;
 
@@ -130,19 +136,9 @@ FloatSimdLayer::FloatSimdLayer(const FloatLayer *float_layer) {
   // we do not use simd for bias.
   this->bias_ = new float[LayerBase::node_count_];
   // copy the bias values.
-  std::copy(float_layer->bias(), float_layer->bias() + float_layer->node_count(),
+  std::copy(float_layer->bias(),
+            float_layer->bias() + float_layer->node_count(),
             this->bias_);
-}
-
-//
-__m128 *getSimdFloat(const float *values, size_t dim) {
-  size_t k = dim / 4;
-  __m128 *result = dnn::AlignedAlloc<__m128>(k);
-
-  for (size_t i = 0; i < k; ++i) {
-    result[i] = _mm_load_ps(&values[i * 4]);
-  }
-  return result;
 }
 
 // finds the maximum absolute value in [floats].
@@ -203,10 +199,12 @@ CalculationContext::CalculationContext(QuantizedDnn *dnn,
   this->input_count_ = input_count;
 
   // allocate for float activations. Only batch amount.
-  this->activations_ = dnn::AlignedAlloc<float>(this->hidden_node_count_ * batch_size);
+  this->activations_ =
+      dnn::AlignedAlloc<float>(this->hidden_node_count_ * batch_size);
 
   // allocate for quantized unsigned char input values.
-  this->quantized_activations_ = dnn::AlignedAlloc<unsigned char>(this->hidden_node_count_ * input_count);
+  this->quantized_activations_ =
+      dnn::AlignedAlloc<unsigned char>(this->hidden_node_count_ * input_count);
 
   // softmax calculations are stateful. therefore we need one for each calculation context.
   this->soft_max_ = new SoftMax(dnn->output_dimension());
@@ -247,16 +245,18 @@ void CalculationContext::InputActivations(const BatchData &inputData,
   }
 }
 
-// Bias values are not quantized and addition is also not vectorized for simplicity.
+// Adds bias values using SIMD floating point add.
 void CalculationContext::AddBias(const float *bias) {
 
   float *ac = this->activations_;
   for (size_t k = 0; k < this->batch_size_; k++) {
-    for (size_t i = 0; i < this->hidden_node_count_; ++i) {
+    for (size_t i = 0; i < this->hidden_node_count_; i += 4) {
       // for inputs in the batch.
-      ac[i] += bias[i];
+      __m128 val = _mm_load_ps(&ac[i]);
+      const __m128 bias4 = _mm_load_ps(&bias[i]);
+      val = _mm_add_ps(val, bias4);
+      _mm_store_ps(&ac[i], val);
     }
-
     // advance to the next activations.
     ac += this->hidden_node_count_;
   }
@@ -300,7 +300,8 @@ void CalculationContext::QuantizedLayerActivations(const QuantizedSimdLayer &lay
   // for each node
   for (size_t i = 0; i < nodeCount; ++i) {
     unsigned char *input =
-        &this->quantized_activations_[batch_start_index * layer.input_dimension()];
+        &this->quantized_activations_[batch_start_index
+            * layer.input_dimension()];
 
     // for inputs in the batch.
     for (size_t k = 0; k < this->batch_size_; k++) {
@@ -329,7 +330,7 @@ inline float quantizedNodeSum(const size_t vectorSize,
   for (size_t j = 0; j < vectorSize; ++j) {
     // load quantized unsigned char input values.
     const __m128i
-        inputVec = _mm_load_si128((__m128i *) &quantizedInput[j * 16]);
+        inputVec = _mm_load_si128((__m128i *)&quantizedInput[j * 16]);
     // c = saturate(i[0]*w[0]+i[1]*w[1]), saturate(i[2]*w[2]+i[3]*w[3]),...,
     // saturate(i[14]*w[14]+i[15]*w[15])
     // c contains eight 16 bit value.
@@ -451,9 +452,11 @@ BatchData *CalculationContext::CalculateOutput() {
 }
 
 // generates a quantized layer from a float values layer.
-// if a weight value is higher than cutoff value or less than -cutoff value, they are trimmed.
+// if a weight value is higher than cutoff value or less than -cutoff value,
+// they are trimmed.
 
-QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer, float cutoff) {
+QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer,
+                                       float cutoff) {
   this->node_count_ = floatLayer.node_count();
   this->input_dimension_ = floatLayer.input_dimension();
   float maxWeight = cutoff;
@@ -477,7 +480,8 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer, float cutof
 
   // allocate SIMD registers for `char` valued weights. Total amount is
   // node_count*input dim.
-  this->weights_ = dnn::AlignedAlloc<__m128i>(this->node_count_ * inputSimdVectorSize);
+  this->weights_ =
+      dnn::AlignedAlloc<__m128i>(this->node_count_ * inputSimdVectorSize);
 
   __m128i *w = this->weights_;
   // for each node
@@ -500,7 +504,9 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer, float cutof
 
     // transfer char values and load to SIMD.
     for (size_t k = 0; k < inputSimdVectorSize; ++k) {
-      w[k] = _mm_load_si128(reinterpret_cast<const __m128i *> (&quantizedWeights[k * 16]));
+      w[k] =
+          _mm_load_si128(reinterpret_cast<const __m128i *> (&quantizedWeights[k
+              * 16]));
     }
     w += inputSimdVectorSize;
   }
@@ -515,7 +521,7 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer, float cutof
 QuantizedDnn::QuantizedDnn(const FloatDnn &floatDnn, float cutoff) {
   this->input_layer_ = new FloatSimdLayer(floatDnn.input_layer());
   this->layers_ = std::vector<QuantizedSimdLayer *>();
-  this->layers_.reserve(static_cast<unsigned long> (floatDnn.layer_count() - 1));
+  this->layers_.reserve(floatDnn.layer_count() - 1);
 
   for (size_t i = 1; i < floatDnn.layer_count(); i++) {
     dnn::QuantizedSimdLayer *layer =
@@ -525,9 +531,13 @@ QuantizedDnn::QuantizedDnn(const FloatDnn &floatDnn, float cutoff) {
 
   this->output_layer_ = this->layers_[layers_.size() - 1];
   this->shift_ = dnn::AlignedAlloc<float>(floatDnn.input_dimension());
-  std::copy(floatDnn.shift(), floatDnn.shift() + floatDnn.input_dimension(), this->shift_);
+  std::copy(floatDnn.shift(),
+            floatDnn.shift() + floatDnn.input_dimension(),
+            this->shift_);
   this->scale_ = dnn::AlignedAlloc<float>(floatDnn.input_dimension());
-  std::copy(floatDnn.scale(), floatDnn.scale() + floatDnn.input_dimension(), this->scale_);
+  std::copy(floatDnn.scale(),
+            floatDnn.scale() + floatDnn.input_dimension(),
+            this->scale_);
 }
 
 // applies soft-max to an array of values.
