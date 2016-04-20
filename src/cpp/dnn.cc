@@ -83,15 +83,13 @@ namespace dnn {
 
 QuantizedSigmoid *qSigmoid = new QuantizedSigmoid();
 
-__m128 *getSimdFloat(const float *values, size_t dim);
-
 inline float horizontalSum(__m128 x);
 
 inline int horizontalSum(__m128i x);
 
 inline float quantizedNodeSum(const size_t vectorSize,
                               const unsigned char *quantizedInput,
-                              const __m128i *weights);
+                              const char *weights);
 
 const float WEIGHT_MULTIPLIER = 127;
 
@@ -288,10 +286,9 @@ void CalculationContext::QuantizedSigmoid(size_t batch_index) {
 void CalculationContext::QuantizedLayerActivations(const QuantizedSimdLayer &layer,
                                                    size_t batch_start_index,
                                                    float *linear_activations) {
-  size_t vectorSize = layer.input_dimension() / 16;
 
   // get quantized weight array for the node i.
-  const __m128i *w = layer.weights();
+  const char *w = layer.weights();
 
   const size_t nodeCount = layer.node_count();
   float dequantizationCoefficient =
@@ -299,21 +296,21 @@ void CalculationContext::QuantizedLayerActivations(const QuantizedSimdLayer &lay
 
   // for each node
   for (size_t i = 0; i < nodeCount; ++i) {
+    const size_t input_size = layer.input_dimension();
     unsigned char *input =
-        &this->quantized_activations_[batch_start_index
-            * layer.input_dimension()];
+        &this->quantized_activations_[batch_start_index * input_size];
 
     // for inputs in the batch.
     for (size_t k = 0; k < this->batch_size_; k++) {
       if (k + batch_start_index >= this->input_count_) break;
 
-      float sum = dnn::quantizedNodeSum(vectorSize, input, w);
+      float sum = dnn::quantizedNodeSum(input_size, input, w);
 
       const size_t i1 = k * nodeCount + i;
       linear_activations[i1] = sum / dequantizationCoefficient;
-      input += layer.input_dimension();
+      input += input_size;
     }
-    w += vectorSize;
+    w += input_size;
   }
 }
 
@@ -322,19 +319,22 @@ void CalculationContext::QuantizedLayerActivations(const QuantizedSimdLayer &lay
 
 inline float quantizedNodeSum(const size_t vectorSize,
                               const unsigned char *quantizedInput,
-                              const __m128i *weights) {
+                              const char *weights) {
   // set sum to 0
   __m128i sum = _mm_setzero_si128();
 
-  // loop for input_dimension/16 times. (Because we quantized to 1 byte)
-  for (size_t j = 0; j < vectorSize; ++j) {
+  // loop for input_dimension times. (But with step size=16) 
+  // Because we quantized to 1 byte)
+  for (size_t j = 0; j < vectorSize; j += 16) {
     // load quantized unsigned char input values.
-    const __m128i
-        inputVec = _mm_load_si128((__m128i *)&quantizedInput[j * 16]);
+    const __m128i inputVec = _mm_load_si128(
+        reinterpret_cast<const __m128i *>(&quantizedInput[j]));
     // c = saturate(i[0]*w[0]+i[1]*w[1]), saturate(i[2]*w[2]+i[3]*w[3]),...,
     // saturate(i[14]*w[14]+i[15]*w[15])
     // c contains eight 16 bit value.
-    const __m128i c = _mm_maddubs_epi16(inputVec, weights[j]);
+    const __m128i w128 = _mm_load_si128(
+        reinterpret_cast<const __m128i *>(&weights[j]));
+    const __m128i c = _mm_maddubs_epi16(inputVec, w128);
     // unpack 4 lowest 16 bit values to 32 bits.
     const __m128i lo = _mm_cvtepi16_epi32(c);
     // unpack 4 highest 16 bit values to 32 bits.
@@ -342,7 +342,7 @@ inline float quantizedNodeSum(const size_t vectorSize,
     // add them to sum.
     sum = _mm_add_epi32(_mm_add_epi32(lo, hi), sum);
   }
-  return dnn::horizontalSum(sum);
+  return static_cast<float>(dnn::horizontalSum(sum));
 }
 
 // Calculates activations for a set of output nodes against a single
@@ -353,8 +353,6 @@ float *CalculationContext::LazyOutputActivations(size_t inputIndex,
                                                  const char *outputNodes) {
   // we do this only for output.
   QuantizedSimdLayer *layer = this->dnn_->output_layer();
-
-  const size_t vectorSize = layer->input_dimension() / 16;
 
   const float dequantizationCoefficient =
       layer->multiplier() * dnn::SIGMOID_QUANTIZATION_MULTIPLIER;
@@ -371,14 +369,15 @@ float *CalculationContext::LazyOutputActivations(size_t inputIndex,
     }
 
     // input batch start.
+    const size_t dimension = layer->input_dimension();
     unsigned char *input =
-        &this->quantized_activations_[inputIndex * layer->input_dimension()];
+        &this->quantized_activations_[inputIndex * dimension];
 
     if (inputIndex >= this->input_count_) break;
 
-    float sum = dnn::quantizedNodeSum(vectorSize,
+    float sum = dnn::quantizedNodeSum(dimension,
                                       input,
-                                      &layer->weights()[i * vectorSize]);
+                                      &layer->weights()[i * dimension]);
 
     // we set the result after dequantization and adding bias.
     result[i] = sum / dequantizationCoefficient + bias[i];
@@ -476,19 +475,14 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer,
   // find linear quantization multiplier
   this->multiplier_ = roundf(dnn::WEIGHT_MULTIPLIER / max);
 
-  const size_t inputSimdVectorSize = floatLayer.input_dimension() / 16;
-
   // allocate SIMD registers for `char` valued weights. Total amount is
   // node_count*input dim.
   this->weights_ =
-      dnn::AlignedAlloc<__m128i>(this->node_count_ * inputSimdVectorSize);
+      dnn::AlignedAlloc<char>(this->node_count_ * floatLayer.input_dimension());
 
-  __m128i *w = this->weights_;
+  char *w = this->weights_;
   // for each node
   for (size_t i = 0; i < this->node_count_; i++) {
-    char *quantizedWeights;
-    // align allocated memory for quantized Weights.
-    quantizedWeights = dnn::AlignedAlloc<char>(floatLayer.input_dimension());
 
     // 8 bit weight quantization
     for (size_t k = 0; k < floatLayer.input_dimension(); ++k) {
@@ -499,16 +493,9 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer,
       if (minWeight > maxWeight) {
         f = maxWeight;
       }
-      quantizedWeights[k] = static_cast<char>(roundf(f * multiplier_));
+      w[k] = static_cast<char>(roundf(f * multiplier_));
     }
-
-    // transfer char values and load to SIMD.
-    for (size_t k = 0; k < inputSimdVectorSize; ++k) {
-      w[k] =
-          _mm_load_si128(reinterpret_cast<const __m128i *> (&quantizedWeights[k
-              * 16]));
-    }
-    w += inputSimdVectorSize;
+    w += this->input_dimension_;
   }
 
   this->bias_ = new float[floatLayer.node_count()];

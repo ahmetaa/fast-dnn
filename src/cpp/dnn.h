@@ -109,14 +109,14 @@ class QuantizedSimdLayer: public LayerBase {
 
   float multiplier() const { return multiplier_; }
 
-  __m128i *weights() const { return weights_; }
+  char *weights() const { return weights_; }
 
   ~QuantizedSimdLayer() {
     aligned_free(weights_);
   }
 
  private:
-  __m128i *weights_;
+  char *weights_;
   float multiplier_;
 
 };
@@ -220,6 +220,7 @@ class CalculationContext {
   // this is actually a flattened two dimensional array.
   float *activations_;
 
+  // this is used for lazy calculation
   float *single_output_;
 
   SoftMax *soft_max_;
