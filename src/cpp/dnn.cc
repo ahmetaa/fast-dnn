@@ -187,7 +187,6 @@ void QuantizedDnn::ApplyShiftAndScale(const BatchData &batchInput) {
   }
 }
 
-
 CalculationContext::CalculationContext(QuantizedDnn *dnn,
                                        size_t input_count,
                                        size_t batch_size) {
@@ -327,14 +326,14 @@ inline float quantizedNodeSum(const size_t vectorSize,
   // Because we quantized to 1 byte)
   for (size_t j = 0; j < vectorSize; j += 16) {
     // load quantized unsigned char input values.
-    const __m128i inputVec = _mm_load_si128(
+    const __m128i input128 = _mm_load_si128(
         reinterpret_cast<const __m128i *>(&quantizedInput[j]));
+    const __m128i weight128 = _mm_load_si128(
+        reinterpret_cast<const __m128i *>(&weights[j]));
     // c = saturate(i[0]*w[0]+i[1]*w[1]), saturate(i[2]*w[2]+i[3]*w[3]),...,
     // saturate(i[14]*w[14]+i[15]*w[15])
     // c contains eight 16 bit value.
-    const __m128i w128 = _mm_load_si128(
-        reinterpret_cast<const __m128i *>(&weights[j]));
-    const __m128i c = _mm_maddubs_epi16(inputVec, w128);
+    const __m128i c = _mm_maddubs_epi16(input128, weight128);
     // unpack 4 lowest 16 bit values to 32 bits.
     const __m128i lo = _mm_cvtepi16_epi32(c);
     // unpack 4 highest 16 bit values to 32 bits.
