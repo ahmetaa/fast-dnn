@@ -117,18 +117,14 @@ FloatSimdLayer::FloatSimdLayer(const FloatLayer *float_layer) {
   this->node_count_ = float_layer->node_count();
   this->input_dimension_ = float_layer->input_dimension();
 
-  const size_t simdVectorDim = this->input_dimension_ / 4;
+  this->weights_ = dnn::AlignedAlloc<float>(this->node_count_ * this->input_dimension_);
 
-  this->weights_ = dnn::SIMD_alloc<__m128>(this->node_count_ * simdVectorDim);
-
-  __m128 *w = this->weights_;
+  float *w = this->weights_;
 
   for (size_t i = 0; i < this->node_count_; ++i) {
-    for (size_t j = 0; j < simdVectorDim; ++j) {
-      float *p = &float_layer->weights()[i][j * 4];
-      w[j] = _mm_load_ps(p);
-    }
-    w += simdVectorDim;
+    float *s = float_layer->weights()[i];
+    std::copy(s, s + this->input_dimension(), w);
+    w += this->input_dimension();
   }
 
   // we do not use simd for bias.
@@ -141,7 +137,7 @@ FloatSimdLayer::FloatSimdLayer(const FloatLayer *float_layer) {
 //
 __m128 *getSimdFloat(const float *values, size_t dim) {
   size_t k = dim / 4;
-  __m128 *result = dnn::SIMD_alloc<__m128>(k);
+  __m128 *result = dnn::AlignedAlloc<__m128>(k);
 
   for (size_t i = 0; i < k; ++i) {
     result[i] = _mm_load_ps(&values[i * 4]);
@@ -180,16 +176,18 @@ inline float horizontalSum(__m128 x) {
 // applies shift and scale operations to input values.
 void QuantizedDnn::ApplyShiftAndScale(const BatchData &batchInput) {
 
-  const size_t size = batchInput.dimension() / 4;
+  const size_t size = batchInput.dimension();
 
   float *input = batchInput.data();
 
   for (size_t i = 0; i < batchInput.vector_count(); ++i) {
-    for (size_t k = 0; k < size; ++k) {
-      __m128 val = _mm_load_ps(&input[k * 4]);
-      val = _mm_add_ps(val, this->shift_[k]);
-      val = _mm_mul_ps(val, this->scale_[k]);
-      _mm_store_ps(&input[k * 4], val);
+    for (size_t k = 0; k < size; k += 4) {
+      __m128 val = _mm_load_ps(&input[k]);
+      __m128 shift = _mm_load_ps(&shift_[k]);
+      __m128 scale = _mm_load_ps(&scale_[k]);
+      val = _mm_add_ps(val, shift);
+      val = _mm_mul_ps(val, scale);
+      _mm_store_ps(&input[k], val);
     }
     input += batchInput.dimension();
   }
@@ -205,15 +203,15 @@ CalculationContext::CalculationContext(QuantizedDnn *dnn,
   this->input_count_ = input_count;
 
   // allocate for float activations. Only batch amount.
-  this->activations_ = dnn::SIMD_alloc<float>(this->hidden_node_count_ * batch_size);
+  this->activations_ = dnn::AlignedAlloc<float>(this->hidden_node_count_ * batch_size);
 
   // allocate for quantized unsigned char input values.
-  this->quantized_activations_ = dnn::SIMD_alloc<unsigned char>(this->hidden_node_count_ * input_count);
+  this->quantized_activations_ = dnn::AlignedAlloc<unsigned char>(this->hidden_node_count_ * input_count);
 
   // softmax calculations are stateful. therefore we need one for each calculation context.
   this->soft_max_ = new SoftMax(dnn->output_dimension());
 
-  this->single_output_ = dnn::SIMD_alloc<float>(dnn->output_dimension());
+  this->single_output_ = dnn::AlignedAlloc<float>(dnn->output_dimension());
 
 }
 
@@ -222,10 +220,9 @@ CalculationContext::CalculationContext(QuantizedDnn *dnn,
 void CalculationContext::InputActivations(const BatchData &inputData,
                                           size_t batch_index) {
   const size_t dimension = this->dnn_->input_dimension();
-  const size_t vectorInputSize = dimension / 4;
 
   // for each node.
-  const __m128 *w = this->dnn_->input_layer()->weights();
+  float *w = this->dnn_->input_layer()->weights();
 
   for (size_t i = 0; i < this->hidden_node_count_; ++i) {
     const float *input = &inputData.data()[batch_index * dimension];
@@ -235,9 +232,10 @@ void CalculationContext::InputActivations(const BatchData &inputData,
       if (j + batch_index >= inputData.vector_count()) break;
       __m128 sum = _mm_setzero_ps();
 
-      for (size_t k = 0; k < vectorInputSize; ++k) {
-        const __m128 input128 = _mm_load_ps(&input[k * 4]);
-        const __m128 mul = _mm_mul_ps(input128, w[k]);
+      for (size_t k = 0; k < dimension; k += 4) {
+        const __m128 input128 = _mm_load_ps(&input[k]);
+        const __m128 weight128 = _mm_load_ps(&w[k]);
+        const __m128 mul = _mm_mul_ps(input128, weight128);
         sum = _mm_add_ps(sum, mul);
       }
       this->activations_[j * this->hidden_node_count_ + i] =
@@ -245,7 +243,7 @@ void CalculationContext::InputActivations(const BatchData &inputData,
       // advance to next input vector.
       input += dimension;
     }
-    w += vectorInputSize;
+    w += dimension;
   }
 }
 
@@ -427,7 +425,7 @@ void CalculationContext::CalculateUntilLastHiddenLayer(const BatchData &input) {
 BatchData *CalculationContext::CalculateOutput() {
   // allocate for output.
   const size_t outSize = this->dnn_->output_dimension();
-  float *outputs = dnn::SIMD_alloc<float>(this->input_count_ * outSize);
+  float *outputs = dnn::AlignedAlloc<float>(this->input_count_ * outSize);
 
   // calculate in batches.
   for (size_t i = 0; i < this->input_count_; i += batch_size_) {
@@ -479,14 +477,14 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer, float cutof
 
   // allocate SIMD registers for `char` valued weights. Total amount is
   // node_count*input dim.
-  this->weights_ = dnn::SIMD_alloc<__m128i>(this->node_count_ * inputSimdVectorSize);
+  this->weights_ = dnn::AlignedAlloc<__m128i>(this->node_count_ * inputSimdVectorSize);
 
   __m128i *w = this->weights_;
   // for each node
   for (size_t i = 0; i < this->node_count_; i++) {
     char *quantizedWeights;
     // align allocated memory for quantized Weights.
-    quantizedWeights = dnn::SIMD_alloc<char>(floatLayer.input_dimension());
+    quantizedWeights = dnn::AlignedAlloc<char>(floatLayer.input_dimension());
 
     // 8 bit weight quantization
     for (size_t k = 0; k < floatLayer.input_dimension(); ++k) {
@@ -526,8 +524,10 @@ QuantizedDnn::QuantizedDnn(const FloatDnn &floatDnn, float cutoff) {
   }
 
   this->output_layer_ = this->layers_[layers_.size() - 1];
-  this->shift_ = dnn::getSimdFloat(floatDnn.shift(), floatDnn.input_dimension());
-  this->scale_ = dnn::getSimdFloat(floatDnn.scale(), floatDnn.input_dimension());
+  this->shift_ = dnn::AlignedAlloc<float>(floatDnn.input_dimension());
+  std::copy(floatDnn.shift(), floatDnn.shift() + floatDnn.input_dimension(), this->shift_);
+  this->scale_ = dnn::AlignedAlloc<float>(floatDnn.input_dimension());
+  std::copy(floatDnn.scale(), floatDnn.scale() + floatDnn.input_dimension(), this->scale_);
 }
 
 // applies soft-max to an array of values.

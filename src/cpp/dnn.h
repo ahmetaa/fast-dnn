@@ -37,7 +37,7 @@ inline void aligned_free(void *ptr) {
 }
 
 template<typename T>
-inline T *SIMD_alloc(size_t count) {
+inline T *AlignedAlloc(size_t count) {
   return reinterpret_cast<T *> (aligned_malloc(16, sizeof(T) * count));
 }
 
@@ -90,14 +90,14 @@ class FloatSimdLayer: public LayerBase {
 
   FloatSimdLayer(const FloatLayer *float_layer);
 
-  __m128 *weights() const { return weights_; }
+  float *weights() const { return weights_; }
 
   ~FloatSimdLayer() {
     aligned_free(weights_);
   }
 
  private :
-  __m128 *weights_;
+  float *weights_;
 };
 
 // Layer for Quantized DNN
@@ -156,8 +156,8 @@ class QuantizedDnn {
   FloatSimdLayer *input_layer_;
   std::vector<QuantizedSimdLayer *> layers_;
   QuantizedSimdLayer *output_layer_;
-  __m128 *shift_;
-  __m128 *scale_;
+  float *shift_;
+  float *scale_;
 };
 
 class CalculationContext {

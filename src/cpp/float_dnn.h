@@ -31,11 +31,19 @@ class BatchData {
 
   float *data() const { return data_; }
 
+  void setData (float* data) {
+      data_ = data;
+  }
+
   void dump();
 
   void dumpToFile(std::string fileName, bool binary);
 
-  ~BatchData() { delete data_; }
+  ~BatchData() {
+    if (data_ != nullptr) {
+      delete[] data_;
+    }
+  }
 
  private:
 
