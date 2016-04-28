@@ -37,23 +37,21 @@ public class FuncTest {
         data.serializeDataMatrix(outFile, vectorCount);
     }
 
-    public static float[][] runQuantized() throws IOException {
+    public static float[][] runQuantized(
+            File model,
+            File inputFile,
+            int iterationCount) throws IOException {
 
-        //QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.tv.model"));
-        QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.tv.model"));
-        float[][] input = BatchData.loadRawBinary("a", new File("data/16khz-10s.bin")).getAsFloatMatrix();
+        QuantizedDnn dnn = QuantizedDnn.loadFromFile(model);
+        float[][] input = BatchData.loadRawBinary("a", inputFile).getAsFloatMatrix();
         float[][] nativeResult = null;
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < iterationCount; i++) {
             long start = System.currentTimeMillis();
             nativeResult = dnn.calculate(input, 10);
             System.out.println(i + " Native calculated in: " + (System.currentTimeMillis() - start));
         }
-/*
-        for(int k = 0; k<nativeResult.length; k++) {
-            System.out.println(Arrays.toString(Arrays.copyOf(nativeResult[k],30)));
-        }
-*/
         System.out.println("-------------");
+        dnn.delete();
         return nativeResult;
     }
 
@@ -75,37 +73,49 @@ public class FuncTest {
         }
     }
 
-    static List<FloatData> runNaive() throws IOException {
-        FeedForwardNetwork n = FeedForwardNetwork.loadFromBinary(new File("data/dnn.extended.tv.model"));
-        BatchData b = BatchData.loadRawBinary("a", new File("data/16khz.bin"));
-        long start = System.currentTimeMillis();
-        List<FloatData> result = n.calculate(b.getData());
-        System.out.println("Java calculated in: " + (System.currentTimeMillis() - start));
+    static List<FloatData> runNaive(
+            File model,
+            File inputFile,
+            int iterationCount) throws IOException {
+        FeedForwardNetwork n = FeedForwardNetwork.loadFromBinary(model);
+        BatchData b = BatchData.loadRawBinary("a", inputFile);
+        List<FloatData> result = null;
+        for (int i = 0; i < iterationCount; i++) {
+            long start = System.currentTimeMillis();
+            result = n.calculate(b.getData());
+            System.out.println("Java naive calculated in: " + (System.currentTimeMillis() - start));
+        }
+        System.out.println("-------------");
         return result;
     }
 
-    static void lazyEmulation() throws IOException {
-        QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.tv.model"));
-        float[][] input = BatchData.loadRawBinary("a", new File("data/16khz-10s.bin")).getAsFloatMatrix();
+    static float[][] lazyEmulation(
+            File model,
+            File inputFile,
+            int iterationCount,
+            float averageOutputNodeRatio) throws IOException {
+        QuantizedDnn dnn = QuantizedDnn.loadFromFile(model);
+        float[][] input = BatchData.loadRawBinary("a", inputFile).getAsFloatMatrix();
         byte[][] masks = generateMasks(
                 input.length,
                 dnn.outputDimension(),
-                (int) (dnn.outputDimension() * 0.50),
+                (int) (dnn.outputDimension() * averageOutputNodeRatio),
                 (int) (dnn.outputDimension() * 0.03));
-        long start = System.currentTimeMillis();
-        QuantizedDnn.LazyContext context = dnn.getNewLazyContext(input.length);
-        context.calculateUntilOutput(input);
-
-        for (int i = 0; i < input.length; i++) {
-            byte[] mask = masks[i];
-//            byte[] mask = new byte[dnn.outputDimension()];
-//            Arrays.fill(mask,(byte)1);
-            float[] result = context.calculateForOutputNodes(mask);
-            //System.out.println(Arrays.toString(Arrays.copyOf(result,30)));
+        float[][] result = new float[input.length][];
+        for (int j = 0; j < iterationCount; j++) {
+            long start = System.currentTimeMillis();
+            QuantizedDnn.LazyContext context = dnn.getNewLazyContext(input.length);
+            context.calculateUntilOutput(input);
+            for (int i = 0; i < input.length; i++) {
+                byte[] mask = masks[i];
+                result[i] = context.calculateForOutputNodes(mask);
+            }
+            context.delete();
+            System.out.println("Lazy calculated in: " + (System.currentTimeMillis() - start));
         }
-        context.delete();
         dnn.delete();
-        System.out.println("Lazy calculated in: " + (System.currentTimeMillis() - start));
+        System.out.println("-------------");
+        return result;
     }
 
     static byte[][] generateMasks(int count, int dimension, int averageActiveNode, int averageNewActiveNode) {
@@ -155,8 +165,12 @@ public class FuncTest {
         //generateNN();
         //extendNetwork(new File("data/dnn.tv.model"), new File("data/dnn.extended.tv.model"));
         //generateAlignedInput(1000, new File("data/16khz-10s.bin"));
-        runQuantized();
-        //runNaive();
-        lazyEmulation();
+        File model = new File("data/dnn.extended.tv.model");
+        File input = new File("data/16khz.bin");
+        int iterationCount = 5;
+
+        runNaive(model, input, 1);
+        runQuantized(model, input, iterationCount);
+        lazyEmulation(model, input, iterationCount, 0.40f);
     }
 }
