@@ -1,4 +1,7 @@
-#include <iostream>
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#define _SCL_SECURE_NO_WARNINGS
+#endif
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -6,8 +9,9 @@
 #include <x86intrin.h>
 #endif
 
+#include <iostream>
 #include <vector>
-#include <math.h>
+#include <cmath>
 #include "dnn.h"
 #include <chrono>
 
@@ -102,17 +106,17 @@ QuantizedSigmoid::QuantizedSigmoid() {
   for (int i = -dnn::SIGMOID_HALF_LOOKUP_SIZE;
        i < dnn::SIGMOID_HALF_LOOKUP_SIZE; ++i) {
     float k = i / 100.0f;
-    float sigmoid = 1.0f / (1 + expf(-k));
+    float sigmoid = 1.0f / (1 + exp(-k));
     unsigned char q =
-        static_cast<unsigned char> (roundf(
+        static_cast<unsigned char> (round(
             sigmoid * dnn::SIGMOID_QUANTIZATION_MULTIPLIER));
     lookup_[i + size / 2] = q;
   }
 }
 
 inline unsigned char sigmoid(float i) {
-  float k = 1.0f / (1.0f + expf(-i));
-  return static_cast<unsigned char> (roundf(
+  float k = 1.0f / (1.0f + exp(-i));
+  return static_cast<unsigned char> (round(
       k * dnn::SIGMOID_QUANTIZATION_MULTIPLIER));
 }
 
@@ -472,7 +476,7 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer,
   }
 
   // find linear quantization multiplier
-  this->multiplier_ = roundf(dnn::WEIGHT_MULTIPLIER / max);
+  this->multiplier_ = round(dnn::WEIGHT_MULTIPLIER / max);
 
   // allocate SIMD registers for `char` valued weights. Total amount is
   // node_count*input dim.
@@ -492,7 +496,7 @@ QuantizedSimdLayer::QuantizedSimdLayer(const FloatLayer &floatLayer,
       if (minWeight > maxWeight) {
         f = maxWeight;
       }
-      w[k] = static_cast<char>(roundf(f * multiplier_));
+      w[k] = static_cast<char>(round(f * multiplier_));
     }
     w += this->input_dimension_;
   }
@@ -530,7 +534,7 @@ QuantizedDnn::QuantizedDnn(const FloatDnn &floatDnn, float cutoff) {
 void SoftMax::apply(float *input) {
   float total = 0;
   for (size_t i = 0; i < this->size_; ++i) {
-    float d = expf(input[i]);
+    float d = exp(input[i]);
     this->exp_array_[i] = d;
     total += d;
   }

@@ -1,15 +1,10 @@
-//
-// Created by afsina on 5/24/15.
-//
-
 #ifndef DNN_FLOAT_DNN_H
 #define DNN_FLOAT_DNN_H
 
 #include <vector>
 #include <string>
-#include <assert.h>
+#include <cassert>
 #include <iostream>
-#include <string.h>
 
 namespace dnn {
 
@@ -31,8 +26,9 @@ class BatchData {
 
   float *data() const { return data_; }
 
-  void setData (float* data) {
-      data_ = data;
+  // we need this because JNI may want to free the data.
+  void setData(float *data) {
+    data_ = data;
   }
 
   void dump();
@@ -124,7 +120,7 @@ class LayerBase {
   float *bias() const { return bias_; }
 
   virtual ~LayerBase() {
-    delete bias_;
+    delete[] bias_;
   }
 
  protected:
@@ -148,7 +144,9 @@ class FloatLayer: public LayerBase {
   float **weights() const { return weights_; }
 
   ~FloatLayer() {
-    delete[] weights_;
+    for (size_t i = 0; i < node_count_; ++i) {
+      delete[] weights_[i];
+    }
   }
 
  private:
@@ -183,8 +181,8 @@ class FloatDnn {
     for (FloatLayer *layer : layers_) {
       delete layer;
     }
-    delete shift_;
-    delete scale_;
+    delete[] shift_;
+    delete[] scale_;
   }
 
  private:

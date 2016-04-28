@@ -2,6 +2,7 @@ package suskun.nn;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -39,14 +40,20 @@ public class FuncTest {
     public static float[][] runQuantized() throws IOException {
 
         //QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.tv.model"));
-        QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.extended.tv.model"));
-        float[][] input = BatchData.loadRawBinary("a", new File("data/16khz.bin")).getAsFloatMatrix();
+        QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.tv.model"));
+        float[][] input = BatchData.loadRawBinary("a", new File("data/16khz-10s.bin")).getAsFloatMatrix();
         float[][] nativeResult = null;
         for (int i = 0; i < 5; i++) {
             long start = System.currentTimeMillis();
             nativeResult = dnn.calculate(input, 10);
             System.out.println(i + " Native calculated in: " + (System.currentTimeMillis() - start));
         }
+/*
+        for(int k = 0; k<nativeResult.length; k++) {
+            System.out.println(Arrays.toString(Arrays.copyOf(nativeResult[k],30)));
+        }
+*/
+        System.out.println("-------------");
         return nativeResult;
     }
 
@@ -78,12 +85,12 @@ public class FuncTest {
     }
 
     static void lazyEmulation() throws IOException {
-        QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.extended.tv.model"));
-        float[][] input = BatchData.loadRawBinary("a", new File("data/16khz.bin")).getAsFloatMatrix();
+        QuantizedDnn dnn = QuantizedDnn.loadFromFile(new File("data/dnn.tv.model"));
+        float[][] input = BatchData.loadRawBinary("a", new File("data/16khz-10s.bin")).getAsFloatMatrix();
         byte[][] masks = generateMasks(
                 input.length,
                 dnn.outputDimension(),
-                (int) (dnn.outputDimension() * 0.40),
+                (int) (dnn.outputDimension() * 0.50),
                 (int) (dnn.outputDimension() * 0.03));
         long start = System.currentTimeMillis();
         QuantizedDnn.LazyContext context = dnn.getNewLazyContext(input.length);
@@ -91,6 +98,8 @@ public class FuncTest {
 
         for (int i = 0; i < input.length; i++) {
             byte[] mask = masks[i];
+//            byte[] mask = new byte[dnn.outputDimension()];
+//            Arrays.fill(mask,(byte)1);
             float[] result = context.calculateForOutputNodes(mask);
             //System.out.println(Arrays.toString(Arrays.copyOf(result,30)));
         }
@@ -150,6 +159,4 @@ public class FuncTest {
         //runNaive();
         lazyEmulation();
     }
-
-
 }

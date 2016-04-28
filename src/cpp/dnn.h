@@ -1,6 +1,3 @@
-//
-// Created by afsina on 4/26/15.
-//
 #ifdef _MSC_VER
 #include <intrin.h>
 #else
@@ -9,8 +6,8 @@
 
 #include <vector>
 #include <string>
-#include <assert.h>
-#include <math.h>
+#include <cassert>
+#include <cmath>
 #include "float_dnn.h"
 
 #ifndef DNN_DNN_H
@@ -51,9 +48,10 @@ class QuantizedSigmoid {
 
  public:
   QuantizedSigmoid();
+  ~QuantizedSigmoid() { delete[] lookup_; }
 
   unsigned char get(float input) {
-    int k = static_cast<int> (roundf(input * 100));
+    int k = static_cast<int> (round(input * 100));
     if (k <= -SIGMOID_HALF_LOOKUP_SIZE) return 0;
     if (k >= SIGMOID_HALF_LOOKUP_SIZE) {
       return dnn::SIGMOID_QUANTIZATION_MULTIPLIER_UCHAR;
@@ -63,6 +61,7 @@ class QuantizedSigmoid {
 
  private :
   unsigned char *lookup_;
+
 };
 
 class SoftMax {
@@ -193,10 +192,10 @@ class CalculationContext {
   float *LazyOutputActivations(size_t inputIndex, const char *outputNodes);
 
   ~CalculationContext() {
-    delete quantized_activations_;
-    delete activations_;
+    aligned_free(quantized_activations_);
+    aligned_free(activations_);
+    aligned_free(single_output_);
     delete soft_max_;
-    delete single_output_;
   }
 
  private:

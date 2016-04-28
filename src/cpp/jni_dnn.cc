@@ -2,9 +2,11 @@
 #include "dnn.h"
 #include "suskun_nn_QuantizedDnn.h"
 
-static inline dnn::QuantizedDnn *getDnn(jlong handle) {
+inline dnn::QuantizedDnn *getDnn(jlong handle) {
   return reinterpret_cast<dnn::QuantizedDnn *>(handle);
 }
+
+extern "C" {
 
 JNIEXPORT jlong JNICALL Java_suskun_nn_QuantizedDnn_initialize(
     JNIEnv *env,
@@ -155,4 +157,5 @@ JNIEXPORT jint JNICALL Java_suskun_nn_QuantizedDnn_layerCount(
     jlong handle) {
   dnn::QuantizedDnn *quantizedDnn = getDnn(handle);
   return static_cast<jint> (quantizedDnn->layer_count() + 1);
+}
 }
