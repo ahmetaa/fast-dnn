@@ -169,7 +169,7 @@ public class FuncTest {
         File input = new File("data/16khz.bin");
         int iterationCount = 5;
 
-        runNaive(model, input, 1);
+        //runNaive(model, input, 1);
         runQuantized(model, input, iterationCount);
         lazyEmulation(model, input, iterationCount, 0.40f);
     }

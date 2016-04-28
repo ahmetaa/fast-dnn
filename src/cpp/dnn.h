@@ -15,24 +15,6 @@
 
 namespace dnn {
 
-inline void *aligned_malloc(size_t align, size_t size) {
-  void *result;
-#ifdef _MSC_VER
-  result = _aligned_malloc(size, align);
-#else
-  if (posix_memalign(&result, align, size)) result = 0;
-#endif
-  return result;
-}
-
-inline void aligned_free(void *ptr) {
-#ifdef _MSC_VER
-  _aligned_free(ptr);
-#else
-  free(ptr);
-#endif
-}
-
 template<typename T>
 inline T *AlignedAlloc(size_t count) {
   return reinterpret_cast<T *> (aligned_malloc(16, sizeof(T) * count));

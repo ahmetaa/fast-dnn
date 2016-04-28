@@ -448,7 +448,7 @@ BatchData *CalculationContext::CalculateOutput() {
     this->soft_max_->apply(&outputs[i * outSize]);
   }
 
-  BatchData *result = new BatchData(outputs, this->input_count_, outSize);
+  BatchData *result = new BatchData(outputs, this->input_count_, outSize, true);
 
   return result;
 }

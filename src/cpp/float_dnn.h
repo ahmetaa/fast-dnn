@@ -8,6 +8,24 @@
 
 namespace dnn {
 
+inline void *aligned_malloc(size_t align, size_t size) {
+  void *result;
+#ifdef _MSC_VER
+  result = _aligned_malloc(size, align);
+#else
+  if (posix_memalign(&result, align, size)) result = 0;
+#endif
+  return result;
+}
+
+inline void aligned_free(void *ptr) {
+#ifdef _MSC_VER
+  _aligned_free(ptr);
+#else
+  free(ptr);
+#endif
+}
+
 /*
  * This class actually holds a float32 matrix with [dimension] columns and
  * [frameCount] rows.
@@ -19,7 +37,7 @@ class BatchData {
 
   BatchData(std::string fileName);
 
-  BatchData(float *input, size_t vectorCount, size_t dimension);
+  BatchData(float *input, size_t vectorCount, size_t dimension, bool aligned);
 
   size_t dimension() const { return dimension_; }
   size_t vector_count() const { return vector_count_; }
@@ -29,6 +47,7 @@ class BatchData {
   // we need this because JNI may want to free the data.
   void setData(float *data) {
     data_ = data;
+    aligned_ = false;
   }
 
   void dump();
@@ -37,12 +56,13 @@ class BatchData {
 
   ~BatchData() {
     if (data_ != nullptr) {
-      delete[] data_;
+      aligned_ ? dnn::aligned_free(data_) : delete[] data_;
     }
   }
 
  private:
 
+  bool aligned_;
   float *data_;
   size_t dimension_;
   size_t vector_count_;

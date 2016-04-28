@@ -24,7 +24,14 @@ public class QuantizedDnn {
 
     static {
         try {
-            NativeUtils.loadLibraryFromJar("/resources/libfast-dnn.so");
+            String osName = System.getProperty("os.name");
+            if (osName.contains("Windows")) {
+                NativeUtils.loadLibraryFromJar("/resources/fast-dnn.dll");
+            } else if (osName.contains("Linux")) {
+                NativeUtils.loadLibraryFromJar("/resources/libfast-dnn.so");
+            } else {
+                throw new IllegalStateException("There is no library for OS = " + osName);
+            }
         } catch (IOException e1) {
             e1.printStackTrace();
         }

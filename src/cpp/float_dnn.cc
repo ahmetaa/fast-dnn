@@ -88,6 +88,7 @@ BatchData::BatchData(const std::string fileName) {
   size_t frameCount = loader->load_size_t();
   this->dimension_ = loader->load_size_t();
   this->vector_count_ = frameCount;
+  this->aligned_ = false;
 
   this->data_ = new float[this->dimension_ * frameCount]();
 
@@ -103,10 +104,11 @@ BatchData::BatchData(const std::string fileName) {
   delete loader;
 }
 
-BatchData::BatchData(float *input, size_t vectorCount, size_t dimension) {
+BatchData::BatchData(float *input, size_t vectorCount, size_t dimension, bool aligned) {
   this->data_ = input;
   this->vector_count_ = vectorCount;
   this->dimension_ = dimension;
+  this->aligned_ = aligned;
 }
 
 void BatchData::dump() {
