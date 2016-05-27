@@ -70,10 +70,9 @@ In general, this network is about a magnitude of order faster than a naive C++/J
 * Hidden layer activations are Sigmoid and output activations are SoftMax functions.
 
 ## Alternatives
-To my knowledge, there is no open source implementation of the paper mentioned above. However, recently a low precision hand tuned matrix multiplication library is open sourced by Google [gemlowp] (https://github.com/google/gemmlowp). Library seems to be developed for DNNs to be used in mobile applications but it also has x86 support.
+Recently announced Tensorflow seems to [quantize] (https://petewarden.com/2016/05/03/how-to-quantize-neural-networks-with-tensorflow/) networks for sigmoid and Relu activations using a low precision hand tuned matrix multiplication library is open sourced by Google [gemlowp] (https://github.com/google/gemmlowp). 
 
 ## TODO
-* Add Windows library
-* Implement PCA in Java API for network node reduction.
-* Implement log and exp approximations for more speed.
-* Implement ReLu activation quantization network (later)
+* Load NN file and pad network in C++ side
+* Implement Java API for network node reduction.
+* Implement ReLu activation quantization network 
