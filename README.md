@@ -58,7 +58,7 @@ Instead of using 32 bit floating numbers for weights and sigmoid activations, 8 
 between -1 and 1 (Actually a Gaussian curve with small variance), and sigmoid activation values are always between 0 and 1. 
 Then, using a special SIMD operation, 16 signed integers
 are multiplied with 16 unsigned integers and results are summed nicely with a couple of SIMD instructions. There are some exceptions and caveats but long story short, this reduces the time required for processing 1 second 
-of speech to around 0.25-0.3 seconds. Which is acceptable even for the runtime systems. For details, please refer to the paper.
+of speech to around 0.25-0.3 seconds. Which is acceptable even for the online systems. For details, please refer to the paper.
 
 ## Actual Speed
 In general, this network is about a magnitude of order faster than a naive C++/Java implementation. According to my tests, it is about 2 times faster than networks that uses BLAS (Via JBlas). Speed difference is lower when compared to C++ Blas, [it is around %25-30 faster] (https://plus.google.com/+AhmetAAkın/posts/RQwqZh9GyPg). When using Java API, it may take a small hit because of the JNI. This library allows usage of very large DNNs (such as 7 2048 node hidden layers and 8000 output nodes). But for small networks, speed difference may not be significant.
