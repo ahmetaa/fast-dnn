@@ -65,7 +65,7 @@ In general, this network is about a magnitude of order faster than a naive C++/J
 
 ## Limitations
 * Only tested in Ubuntu Linux x86-64 (Event then, C++ side may need to be re-compiled). 
-* Works in CPU's with SSE4.2 support.
+* Works in CPU's with SSE4.1 support.
 * Hidden layers must be in equal size.
 * Hidden layer activations are Sigmoid and output activations are SoftMax functions.
 
