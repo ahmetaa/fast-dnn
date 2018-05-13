@@ -168,9 +168,10 @@ public class FeedForwardNetwork {
                     nodeCount = Integer.parseInt(split[0]);
                     inputCount = Integer.parseInt(split[1]);
                 }
-
-                if (nodeCount == -1 || line.startsWith("<"))
+                
+                if (nodeCount == -1 || line.startsWith("<") || line.trim().equals("[") || line.trim().equals("]")) {
                     continue;
+                }
 
                 float[][] weights = new float[nodeCount][inputCount];
                 float[] bias = new float[nodeCount];
