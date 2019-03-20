@@ -33,6 +33,14 @@ public class FeedForwardNetwork {
         this.scaleVector = scaleVector;
     }
 
+    public List<Layer> getLayers() {
+        return layers;
+    }
+
+    public int layerDimension(int layerIndex) {
+        return getLayer(layerIndex).outputDimension;
+    }
+
     public Layer getLayer(int layerIndex) {
         if (layerIndex < 0 || layerIndex >= layers.size())
             throw new IllegalArgumentException("Illegal layer index " + layerIndex);
